@@ -5,10 +5,11 @@ It defines the questions to ask the developer before generating any artifacts.
 
 ## Presentation Rules
 
-- Present **all questions at once** as a numbered list — do not ask one at a time.
-- Wait for the developer to answer all questions before proceeding to Step 4.
+- Ask **one question at a time** using `AskUserQuestion` — do not present a numbered list.
+- Wait for the developer's response before asking the next question.
 - Show the detected stack results (from detect-stack.sh) inline with Q3.
-- If any answer is unclear, ask a brief follow-up — but do not re-present the full list.
+- Use suggested defaults and clear option labels so the developer can answer quickly.
+- If any answer is unclear, ask a brief follow-up before moving on.
 
 ---
 

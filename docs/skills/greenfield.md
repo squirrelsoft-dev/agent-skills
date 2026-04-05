@@ -1,6 +1,6 @@
 # Greenfield Skill
 
-Configures Claude Code for a **brand new project** — one that doesn't have a `.claude/` directory yet. It detects your stack, asks a short set of questions, then generates all the configuration files Claude Code needs to work effectively in your project.
+Configures Claude Code for a **brand new project**. It detects your stack, walks you through a short interview one question at a time, then generates all the configuration files Claude Code needs to work effectively in your project.
 
 ## Installation
 
@@ -25,7 +25,7 @@ Once installed, trigger it in Claude Code with any of:
 The greenfield skill runs in 8 steps:
 
 ### Step 1 — Preflight
-Checks whether a `.claude/` directory already exists. If it does, asks whether to overwrite or abort.
+Checks whether any files that greenfield would generate already exist (CLAUDE.md, settings.json, rules, hooks). The `.claude/skills/` directory is ignored since that's where installed skills live. Only prompts for confirmation if actual conflicts are found, showing the specific files that would be overwritten.
 
 ### Step 2 — Stack Detection
 Runs `detect-stack.sh` against the current directory to identify:
@@ -42,7 +42,7 @@ Runs `detect-stack.sh` against the current directory to identify:
 Outputs a JSON object passed as environment variables to all generator scripts.
 
 ### Step 3 — Developer Interview
-Loads `references/interview.md` and presents all questions at once. Waits for a single response before proceeding.
+Loads `references/interview.md` and asks questions one at a time using `AskUserQuestion`. Each question is presented with clear options or defaults for quick answering.
 
 | Question | Env var set |
 |---|---|

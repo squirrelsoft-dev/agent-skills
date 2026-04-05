@@ -6,7 +6,7 @@ description: >
   to your project. Invoke manually with /greenfield or "set up Claude Code",
   "initialize Claude", "configure Claude for this project".
 disable-model-invocation: true
-allowed-tools: Bash Read Write
+allowed-tools: Bash Read Write Glob AskUserQuestion
 ---
 
 # Greenfield Setup
@@ -24,11 +24,25 @@ Run `/workflow` after this to install development commands and agents.
 
 ## Step 1 — Preflight & Stack Detection
 
-If `.claude/` already exists, ask:
-> "A `.claude/` directory already exists. This will overwrite it.
-> Continue, or run `/brownfield` instead to analyze what's already here?"
+Check whether any files that greenfield would generate already exist. Scan for:
+- `CLAUDE.md`
+- `.claude/settings.json`
+- `.claude/settings.local.json`
+- `.claude/rules/` (any `.md` files inside)
+- `.claude/hooks/` (any `.sh` files inside)
 
-Wait for confirmation before proceeding.
+**Ignore** the `.claude/skills/` directory — that is where installed skills live and is not a conflict.
+
+If **no** conflicting files are found, proceed silently. If **any** conflicting files exist, use `AskUserQuestion` to show the list and ask:
+
+> "The following files already exist and will be overwritten:
+> - [list each conflicting file]
+>
+> Continue and overwrite these, or run `/brownfield` instead to analyze what's already here?"
+>
+> Choices: **Continue** / **Abort**
+
+Wait for confirmation before proceeding. If they choose Abort, stop.
 
 Run stack detection:
 
@@ -48,11 +62,18 @@ Update the detection values based on their answer.
 
 ## Step 2 — Developer Interview
 
-**Present all questions at once** before generating anything.
-Load the full question set from:
+Load the question set from:
 `${CLAUDE_SKILL_DIR}/references/interview.md`
 
-Ask all 7 questions (project name, description, stack confirmation, git setup, agent teams, commit style, CI/CD). **Wait for the developer to answer all questions before proceeding to Step 3.**
+**Ask questions one at a time using `AskUserQuestion`.** This provides a cleaner experience — the developer sees one focused question with clear choices instead of a wall of text.
+
+For each question:
+1. Use `AskUserQuestion` with the question text and suggested options/defaults
+2. Wait for the response
+3. Store the answer in the corresponding environment variable
+4. Move to the next question
+
+Ask all 7 questions (Q1–Q7) in order. Skip Q7's follow-up if the developer answers "no" to CI/CD. **Do not proceed to Step 3 until all questions are answered.**
 
 ---
 

@@ -81,24 +81,35 @@ Run `/workflow` after this to install development commands and agents.
 
 ## Step 1 — Preflight
 
-Check for existing setup:
+Check whether any files that greenfield would generate already exist:
+- `CLAUDE.md`
+- `.claude/settings.json`
+- `.claude/settings.local.json`
+- `.claude/rules/*.md`
+- `.claude/hooks/*.sh`
 
-```bash
-bash .claude/skills/greenfield/scripts/detect-stack.sh
-```
+**Ignore** `.claude/skills/` — that directory holds installed skills and is not a conflict.
 
-If `.claude/` already exists, ask:
-> "A `.claude/` directory already exists. This will overwrite it.
-> Continue, or run `/brownfield` instead to analyze what's already here?"
+If **no** conflicting files are found, proceed silently. If **any** exist, use `AskUserQuestion` to show the specific files that would be overwritten and ask for confirmation:
+> "The following files already exist and will be overwritten:
+> - [list each conflicting file]
+>
+> Continue and overwrite these, or run `/brownfield` instead?"
 
-Wait for confirmation before proceeding.
+Wait for confirmation. If they choose Abort, stop.
 
 ---
 
 ## Step 2 — Stack Detection
 
-The detect-stack.sh script outputs a JSON object with detected values.
-Read and parse the output. If stack is "unknown", ask the developer:
+Run `detect-stack.sh`:
+
+```bash
+bash .claude/skills/greenfield/scripts/detect-stack.sh
+```
+
+The script outputs a JSON object with detected values.
+Read and parse the output. If stack is "unknown", use `AskUserQuestion`:
 > "I couldn't detect your stack. What are you building?
 > (e.g. Next.js, React, Node.js API, Python, Go, Rust, .NET)"
 
@@ -106,11 +117,12 @@ Read and parse the output. If stack is "unknown", ask the developer:
 
 ## Step 3 — Developer Interview
 
-Present all questions at once before generating anything.
+Ask questions **one at a time** using `AskUserQuestion`. This provides a cleaner UX than presenting a wall of text.
+
 Load the full question set from:
 `.claude/skills/greenfield/references/interview.md`
 
-Core questions (always ask):
+Core questions (ask in order, one at a time):
 1. Project name
 2. Project description (1–2 sentences)
 3. Confirm detected stack — show what was found, ask to correct
@@ -119,7 +131,7 @@ Core questions (always ask):
 6. Commit style — conventional commits or free-form?
 7. CI/CD — scaffold GitHub Actions? (yes — ask which / no)
 
-Wait for developer response before proceeding to Step 4.
+Wait for developer response to each question before asking the next.
 
 ---
 
