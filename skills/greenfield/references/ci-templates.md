@@ -6,6 +6,10 @@ It is loaded by SKILL.md during Step 7 when the developer opts into CI/CD scaffo
 SKILL.md substitutes `$PLACEHOLDER` values with the detected/confirmed stack values
 before writing the workflow files to `.github/workflows/`.
 
+**Note:** Node.js/Next.js templates use `$PLACEHOLDER` vars because commands vary by
+package manager. Python and Go templates hardcode stack-standard commands since they
+are consistent across projects.
+
 ---
 
 ## Node.js / TypeScript
@@ -82,17 +86,17 @@ jobs:
       - name: Test
         run: $TEST_CMD
 
-      - name: Build
-        run: $BUILD_CMD
-        env:
-          NEXT_TELEMETRY_DISABLED: 1
-
       - name: Cache Next.js build
         uses: actions/cache@v4
         with:
           path: .next/cache
-          key: nextjs-${{ hashFiles('**/package-lock.json', '**/pnpm-lock.yaml', '**/yarn.lock') }}
+          key: nextjs-${{ hashFiles('**/package-lock.json', '**/pnpm-lock.yaml', '**/yarn.lock', '**/bun.lockb') }}
           restore-keys: nextjs-
+
+      - name: Build
+        run: $BUILD_CMD
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
 
   # Uncomment to add deployment:
   # deploy:
@@ -129,19 +133,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          # Use 'pip' for pip, 'poetry' for poetry. uv does its own caching.
           cache: 'pip'
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f pyproject.toml ]; then pip install -e ".[dev]"; fi
+        run: $INSTALL_CMD
 
       - name: Lint
-        run: ruff check .
+        run: $LINT_CMD
 
       - name: Test
-        run: pytest
+        run: $TEST_CMD
 ```
 
 ---
