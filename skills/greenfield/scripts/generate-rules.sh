@@ -9,7 +9,8 @@ set -e
 
 [[ -z "${PROJECT_DIR:-}" ]] && echo "Error: PROJECT_DIR is required" >&2 && exit 1
 
-STACK="${STACK:-typescript-node}"
+[[ -z "${STACK:-}" ]] && echo "Error: STACK is required" >&2 && exit 1
+
 GENERATED_FILES=()
 
 echo "Generating rules files..." >&2
