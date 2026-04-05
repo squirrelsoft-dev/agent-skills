@@ -62,14 +62,12 @@ Read the appropriate stack reference file based on the confirmed stack:
 
 | Stack | File |
 |---|---|
-| Next.js | `.claude/skills/greenfield/references/stacks/nextjs-react.md` |
-| React | `.claude/skills/greenfield/references/stacks/nextjs-react.md` |
+| Next.js | `.claude/skills/greenfield/references/stacks/nextjs.md` |
+| React | `.claude/skills/greenfield/references/stacks/react.md` |
 | Node.js / TypeScript | `.claude/skills/greenfield/references/stacks/typescript-node.md` |
 | Python | `.claude/skills/greenfield/references/stacks/python.md` |
 | Go | `.claude/skills/greenfield/references/stacks/go.md` |
 | Unknown/other | Use Claude's training knowledge for that stack |
-
-Next.js and React share a reference file — it uses the `FRAMEWORK` value (`nextjs` or `react`) to dispatch stack-specific conventions (build output, lint defaults, directory structure).
 
 Extract the command mappings (`INSTALL_CMD`, `DEV_CMD`, `BUILD_CMD`, `TEST_CMD`, `LINT_CMD`) from the stack reference file based on the detected package manager.
 

@@ -1,6 +1,6 @@
-# Next.js / React Stack Reference
+# Next.js Stack Reference
 
-Loaded by SKILL.md Step 3 when `STACK` is `nextjs` or `react`.
+Loaded by SKILL.md Step 3 when `STACK` is `nextjs`.
 
 ---
 
@@ -26,7 +26,7 @@ Resolve env vars using `PKG_MANAGER` as the column key:
 
 ### LINT_CMD by FORMATTER
 
-> The default row assumes `package.json` defines `"lint": "next lint"` (Next.js default). If no lint script exists, use the eslint/biome row.
+> The default row assumes `package.json` defines `"lint": "next lint"` (Next.js default). If no lint script exists, fall back to `npx eslint .`.
 
 | FORMATTER | npm | pnpm | yarn | bun |
 |---|---|---|---|---|
@@ -35,17 +35,11 @@ Resolve env vars using `PKG_MANAGER` as the column key:
 
 ---
 
-## Framework Variants
+## Framework Details
 
-### FRAMEWORK=nextjs
 - `LINT_CMD` table assumes `package.json` defines `"lint": "next lint"` (Next.js default). If no lint script exists, fall back to `npx eslint .`
 - Build output: `.next/`
 - Add `.next/` to `.gitignore`
-
-### FRAMEWORK=react
-- No built-in lint command — fall back to `eslint .` if eslint is present
-- Build output depends on bundler (vite → `dist/`, CRA → `build/`)
-- `DEV_CMD` is still `$PKG_MANAGER run dev` (vite/CRA both use this)
 
 ---
 
@@ -56,15 +50,6 @@ app/                  # App Router routes (layout.tsx, page.tsx, loading.tsx)
 components/           # Shared UI components
 lib/                  # Utilities, helpers, data fetching
 public/               # Static assets
-```
-
-For `FRAMEWORK=react` (non-Next.js):
-```
-src/
-  components/
-  pages/ or routes/
-  lib/
-public/
 ```
 
 ---

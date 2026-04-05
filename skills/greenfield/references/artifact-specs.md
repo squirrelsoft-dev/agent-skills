@@ -363,8 +363,8 @@ Format command by `FORMATTER` value:
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
-LINT_CMD="${LINT_CMD:-echo 'no lint configured'}"
-TEST_CMD="${TEST_CMD:-echo 'no test configured'}"
+LINT_CMD=<hardcoded at generation time>
+TEST_CMD=<hardcoded at generation time>
 INPUT=$(cat)
 STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false')
 [[ "$STOP_HOOK_ACTIVE" == "true" ]] && exit 0
@@ -372,12 +372,19 @@ AGENT_TYPE=$(echo "$INPUT" | jq -r '.agent_type // "main"')
 [[ "$AGENT_TYPE" == "hook-agent" ]] && exit 0
 ERRORS=""
 cd "$CLAUDE_PROJECT_DIR"
-CHANGED=$(git diff --name-only HEAD 2>/dev/null || echo "")
+UNCOMMITTED=$(git diff --name-only HEAD 2>/dev/null || git ls-files 2>/dev/null || echo "")
+MERGE_BASE=$(git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null || echo "")
+if [[ -n "$MERGE_BASE" ]]; then
+  COMMITTED=$(git diff --name-only "$MERGE_BASE"...HEAD 2>/dev/null || echo "")
+else
+  COMMITTED=""
+fi
+CHANGED="${UNCOMMITTED}${COMMITTED}"
 [[ -z "$CHANGED" ]] && exit 0
-if ! output=$(${LINT_CMD} 2>&1); then
+if ! output=$(eval "$LINT_CMD" 2>&1); then
   ERRORS+="\n## Lint Failed\n\`\`\`\n${output}\n\`\`\`\n"
 fi
-if ! output=$(${TEST_CMD} 2>&1); then
+if ! output=$(eval "$TEST_CMD" 2>&1); then
   ERRORS+="\n## Tests Failed\n\`\`\`\n${output}\n\`\`\`\n"
 fi
 if [[ -n "$ERRORS" ]]; then
