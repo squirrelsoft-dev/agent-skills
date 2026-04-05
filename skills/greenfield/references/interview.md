@@ -43,7 +43,7 @@ It defines the questions to ask the developer before generating any artifacts.
 - **Env var:** `GIT_SETUP`
 
 ### Q5 — Agent teams
-- **Ask:** "Enable experimental agent teams? (allows Claude to spawn sub-agents)"
+- **Ask:** "Enable experimental agent teams? (enables teammate agents that work on parallel domains of the codebase simultaneously, requires CC v2.1.32+)"
 - **Type:** yes / no (required)
 - **Env var:** `AGENT_TEAMS` → `true` or `false`
 - **Notes:** If yes, `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=true` is added to settings.json env block.
@@ -84,6 +84,8 @@ It defines the questions to ask the developer before generating any artifacts.
 | `CI_CD` | Q7 | SKILL.md Step 7 |
 | `CI_WORKFLOWS` | Q7 follow-up | SKILL.md Step 7 |
 
-Additional env vars derived from stack detection (not asked directly):
-`PKG_MANAGER`, `FORMATTER`, `TEST_RUNNER`, `LANG`, `FRAMEWORK`, `HAS_TYPESCRIPT`,
+Additional env vars from detect-stack.sh (not asked directly):
+`PKG_MANAGER`, `FORMATTER`, `TEST_RUNNER`, `LANG`, `FRAMEWORK`, `HAS_TYPESCRIPT`
+
+The following env vars are derived by SKILL.md in Step 4 from `references/stacks/*.md` after the stack is confirmed:
 `INSTALL_CMD`, `DEV_CMD`, `BUILD_CMD`, `TEST_CMD`, `LINT_CMD`
