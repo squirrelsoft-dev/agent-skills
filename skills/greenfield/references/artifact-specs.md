@@ -55,6 +55,7 @@ ${LINT_CMD}         # lint
 **Env vars:** `AGENT_TEAMS`
 
 The `env` block is only included when `AGENT_TEAMS=true`.
+Hook scripts reference `LINT_CMD`, `TEST_CMD`, and `CLAUDE_PROJECT_DIR` — these are baked into the generated hook scripts by `generate-hooks.sh`, not set in settings.json.
 
 ### Template
 
@@ -329,17 +330,20 @@ echo '{"decision":"approve"}'
 **Purpose:** Auto-format written/edited files. Silently skips if formatter unavailable.
 **Env vars:** `FORMATTER`
 
+Example (prettier variant — `generate-hooks.sh` substitutes the format command based on `FORMATTER`):
+
 ```bash
 #!/usr/bin/env bash
 INPUT=$(cat)
 FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
 [[ -z "$FILE" ]] && exit 0
 [[ ! -f "$FILE" ]] && exit 0
+npx prettier --write "$FILE" 2>/dev/null || true
 ```
 
-Append per formatter:
+Format command by `FORMATTER` value:
 
-| Formatter | Command appended |
+| FORMATTER | Command |
 |---|---|
 | prettier | `npx prettier --write "$FILE" 2>/dev/null \|\| true` |
 | biome | `npx @biomejs/biome format --write "$FILE" 2>/dev/null \|\| true` |
@@ -354,9 +358,13 @@ Append per formatter:
 **Purpose:** Run lint + test before task completion. Blocks if either fails.
 **Env vars:** `LINT_CMD`, `TEST_CMD`, `CLAUDE_PROJECT_DIR`
 
+**Note:** `LINT_CMD` and `TEST_CMD` must be exported as environment variables by `generate-hooks.sh` (hardcoded into the script at generation time, not read from the shell at runtime). This avoids `set -u` failures.
+
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
+LINT_CMD="${LINT_CMD:-echo 'no lint configured'}"
+TEST_CMD="${TEST_CMD:-echo 'no test configured'}"
 INPUT=$(cat)
 STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false')
 [[ "$STOP_HOOK_ACTIVE" == "true" ]] && exit 0
