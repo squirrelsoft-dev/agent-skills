@@ -169,6 +169,7 @@ The `env` block is only included when `AGENT_TEAMS=true`.
 | uv | `Bash(uv sync:*)`, `Bash(uv run:*)`, `Bash(python:*)`, `Bash(pytest:*)`, `Bash(ruff:*)` |
 | go | `Bash(go build:*)`, `Bash(go test:*)`, `Bash(go run:*)`, `Bash(go mod:*)`, `Bash(go vet:*)` |
 | cargo | `Bash(cargo:*)` |
+| dotnet | `Bash(dotnet build:*)`, `Bash(dotnet test:*)`, `Bash(dotnet run:*)`, `Bash(dotnet format:*)`, `Bash(dotnet tool:*)` |
 
 Always included: `Bash(git add:*)`, `Bash(git commit:*)`
 
@@ -345,6 +346,7 @@ Append per formatter:
 | ruff | `ruff format "$FILE" 2>/dev/null \|\| black "$FILE" 2>/dev/null \|\| true` |
 | gofmt | `gofmt -w "$FILE" 2>/dev/null \|\| true` |
 | rustfmt | `rustfmt "$FILE" 2>/dev/null \|\| true` |
+| dotnet-format | `dotnet format --include "$FILE" 2>/dev/null \|\| true` |
 
 ### stop-quality-gate.sh
 
