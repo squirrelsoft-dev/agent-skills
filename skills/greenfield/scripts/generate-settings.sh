@@ -7,6 +7,9 @@ set -e
 #
 # Env vars: PROJECT_DIR, AGENT_TEAMS, PKG_MANAGER
 
+[[ -z "${PROJECT_DIR:-}" ]] && echo "Error: PROJECT_DIR is required" >&2 && exit 1
+[[ -z "${PKG_MANAGER:-}" ]] && echo "Error: PKG_MANAGER is required" >&2 && exit 1
+
 echo "Generating settings files..." >&2
 
 mkdir -p "$PROJECT_DIR/.claude"
