@@ -136,16 +136,17 @@ Each script outputs JSON status to stdout (e.g. `{"status":"ok","files":[...]}`)
 
 ## Step 5 — Git Setup (if requested)
 
-Only if the developer chose `init` in Q4:
+Only if the developer chose `init` in Q4.
+
+Use the commit message based on Q6:
+- Conventional: `chore(claude): initialize Claude Code configuration`
+- Free-form: `Initialize project with Claude Code configuration`
 
 ```bash
 git init
 git add CLAUDE.md .claude/ .gitignore
-git commit -m "chore: initialize project with Claude Code configuration"
+git commit -m "[commit message from above]"
 ```
-
-If conventional commits (Q6): use `chore(claude): initialize Claude Code configuration`
-If free-form: use `Initialize project with Claude Code configuration`
 
 ---
 
@@ -157,7 +158,7 @@ Load templates from:
 `.claude/skills/greenfield/references/ci-templates.md`
 
 Generate `.github/workflows/` files for each selected workflow (lint, test, build, deploy).
-Replace placeholder values (`$INSTALL_CMD`, `$LINT_CMD`, `$TEST_CMD`, `$BUILD_CMD`) with the actual commands from the stack reference.
+Replace placeholder values (`$PKG_MANAGER`, `$INSTALL_CMD`, `$LINT_CMD`, `$TEST_CMD`, `$BUILD_CMD`) with the actual values from stack detection and the stack reference.
 
 If git was initialized in Step 5, stage and commit the CI files:
 
