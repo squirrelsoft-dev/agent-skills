@@ -28,15 +28,21 @@ skills/
     │   ├── generate-hooks.sh             ← writes .claude/hooks/*.sh files + chmod +x
     │   ├── generate-claude-md.sh         ← writes CLAUDE.md
     │   └── generate-gitignore.sh         ← appends Claude entries to .gitignore
-    └── references/
-        ├── interview.md                  ← full interview question set
-        ├── artifact-specs.md             ← exact content for every generated file
-        ├── ci-templates.md               ← GitHub Actions workflow templates
-        └── stacks/
-            ├── nextjs-react.md            ← Next.js / React conventions + commands
-            ├── typescript-node.md        ← Node.js/TypeScript conventions
-            ├── python.md                 ← Python conventions
-            └── go.md                    ← Go conventions
+    ├── references/
+    │   ├── interview.md                  ← full interview question set
+    │   ├── artifact-specs.md             ← exact content for every generated file
+    │   ├── ci-templates.md               ← GitHub Actions workflow templates
+    │   └── stacks/
+    │       ├── nextjs-react.md            ← Next.js / React conventions + commands
+    │       ├── typescript-node.md        ← Node.js/TypeScript conventions
+    │       ├── python.md                 ← Python conventions
+    │       └── go.md                    ← Go conventions
+    └── tests/
+        ├── run-tests.sh                  ← entry point (bootstraps bats-core)
+        ├── helpers/                      ← shared setup/teardown and assertions
+        ├── fixtures/                     ← minimal project files per scenario
+        ├── unit/                         ← one .bats file per script
+        └── e2e/                          ← full pipeline per scenario
 ```
 
 ---
@@ -1018,7 +1024,7 @@ Run this to confirm everything is in place:
 find skills/greenfield -type f | sort
 ```
 
-Expected output:
+Expected output should include at minimum:
 ```
 skills/greenfield/SKILL.md
 skills/greenfield/references/artifact-specs.md
@@ -1034,11 +1040,22 @@ skills/greenfield/scripts/generate-gitignore.sh
 skills/greenfield/scripts/generate-hooks.sh
 skills/greenfield/scripts/generate-rules.sh
 skills/greenfield/scripts/generate-settings.sh
+skills/greenfield/tests/run-tests.sh
+skills/greenfield/tests/helpers/setup.bash
+skills/greenfield/tests/helpers/assertions.bash
+skills/greenfield/tests/fixtures/...
+skills/greenfield/tests/unit/...
+skills/greenfield/tests/e2e/...
 ```
 
-And verify scripts are executable:
+Verify scripts are executable:
 ```bash
 ls -la skills/greenfield/scripts/
+```
+
+Run tests to verify all scripts work correctly:
+```bash
+bash skills/greenfield/tests/run-tests.sh
 ```
 
 ---

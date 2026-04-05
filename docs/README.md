@@ -68,3 +68,22 @@ Commands are slash commands installed by the `workflow` skill.
 | [/fix-issue](commands/fix-issue.md) | Implement a GitHub issue end-to-end |
 | [/security-scan](commands/security-scan.md) | On-demand deep security scan |
 | [/triage](commands/triage.md) | Analyze and plan a GitHub issue |
+
+---
+
+## Testing
+
+The greenfield skill has unit and end-to-end tests using [bats-core](https://github.com/bats-core/bats-core).
+
+```bash
+bash skills/greenfield/tests/run-tests.sh
+```
+
+| Directory | What it tests |
+|---|---|
+| `tests/unit/` | Each generator script in isolation (detect-stack, generate-settings, generate-hooks, generate-rules, generate-claude-md, generate-gitignore) |
+| `tests/e2e/` | Full pipeline per scenario (Next.js, Python, empty project, existing `.claude/` directory) |
+| `tests/fixtures/` | Minimal project files for each test scenario |
+| `tests/helpers/` | Shared setup/teardown and assertion functions |
+
+bats-core is auto-installed on first run (cloned into `tests/.bats-core/`, git-ignored). Each test runs in a fresh temporary directory.

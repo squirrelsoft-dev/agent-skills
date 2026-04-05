@@ -40,10 +40,21 @@ The **greenfield** skill runs an interactive interview, detects your stack, then
 - Rust
 - .NET
 
+## Testing
+
+Run the greenfield skill tests (uses [bats-core](https://github.com/bats-core/bats-core), auto-installed on first run):
+
+```bash
+bash skills/greenfield/tests/run-tests.sh
+```
+
+Tests cover stack detection, artifact generation, hook behavior, and full end-to-end scenarios for Next.js, Python, empty projects, and projects with existing `.claude/` directories.
+
 ## Documentation
 
 - [Agent Skills Specification](https://agentskills.io)
 - [Greenfield Implementation Plan](docs/greenfield-implementation-plan.md)
+- [Full documentation index](docs/README.md)
 
 ## License
 

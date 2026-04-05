@@ -1,0 +1,6 @@
+[project]
+name = "test-python-app"
+dependencies = ["fastapi>=0.100.0", "uvicorn"]
+
+[tool.uv]
+dev-dependencies = ["pytest", "ruff"]

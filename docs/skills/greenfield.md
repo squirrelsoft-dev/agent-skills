@@ -132,6 +132,18 @@ Written to `.claude/rules/`. Which files are created depends on the detected sta
 
 ---
 
+## Testing
+
+The greenfield skill has unit and end-to-end tests using bats-core:
+
+```bash
+bash skills/greenfield/tests/run-tests.sh
+```
+
+Unit tests verify each generator script in isolation. E2E tests run the full pipeline for four scenarios: Next.js, Python, empty project, and a project with an existing `.claude/` directory. All tests run in temporary directories.
+
+---
+
 ## After greenfield
 
 Greenfield sets up the foundation. To install the development command layer (slash commands and agents), run the workflow skill next:

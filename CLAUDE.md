@@ -43,6 +43,16 @@ The brownfield skill runs 4 analysis scripts in parallel (repo, conventions, git
 
 Detailed specs for each skill live in `docs/`. These are the source of truth — script content and orchestration flow are defined there.
 
+## Testing
+
+Greenfield skill tests use [bats-core](https://github.com/bats-core/bats-core) (auto-installed on first run). Run all tests:
+
+```bash
+bash skills/greenfield/tests/run-tests.sh
+```
+
+Tests are split into `unit/` (one `.bats` file per script) and `e2e/` (full pipeline per scenario: nextjs, python, empty, existing-claude). Each test runs in a fresh `mktemp -d` directory. Fixtures live in `tests/fixtures/`.
+
 ## Conventions
 
 - Shell scripts use `set -e` and read inputs from environment variables
