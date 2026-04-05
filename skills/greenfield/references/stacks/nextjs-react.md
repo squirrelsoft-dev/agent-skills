@@ -1,6 +1,6 @@
 # Next.js / React Stack Reference
 
-Loaded by SKILL.md Step 4 when `STACK` is `nextjs` or `react`.
+Loaded by SKILL.md Step 3 when `STACK` is `nextjs` or `react`.
 
 ---
 

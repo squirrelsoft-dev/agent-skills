@@ -33,7 +33,7 @@ skills/
         ├── artifact-specs.md             ← exact content for every generated file
         ├── ci-templates.md               ← GitHub Actions workflow templates
         └── stacks/
-            ├── nextjs.md                 ← Next.js conventions + commands
+            ├── nextjs-react.md            ← Next.js / React conventions + commands
             ├── typescript-node.md        ← Node.js/TypeScript conventions
             ├── python.md                 ← Python conventions
             └── go.md                    ← Go conventions
@@ -78,7 +78,7 @@ Run `/workflow` after this to install development commands and agents.
 Check for existing setup:
 
 ```bash
-bash /mnt/skills/user/greenfield/scripts/detect-stack.sh
+bash .claude/skills/greenfield/scripts/detect-stack.sh
 ```
 
 If `.claude/` already exists, ask:
@@ -102,7 +102,7 @@ Read and parse the output. If stack is "unknown", ask the developer:
 
 Present all questions at once before generating anything.
 Load the full question set from:
-`/mnt/skills/user/greenfield/references/interview.md`
+`.claude/skills/greenfield/references/interview.md`
 
 Core questions (always ask):
 1. Project name
@@ -123,11 +123,11 @@ Read the appropriate stack reference file:
 
 | Stack | File |
 |---|---|
-| Next.js | `/mnt/skills/user/greenfield/references/stacks/nextjs.md` |
-| React | `/mnt/skills/user/greenfield/references/stacks/nextjs.md` |
-| Node.js / TypeScript | `/mnt/skills/user/greenfield/references/stacks/typescript-node.md` |
-| Python | `/mnt/skills/user/greenfield/references/stacks/python.md` |
-| Go | `/mnt/skills/user/greenfield/references/stacks/go.md` |
+| Next.js | `.claude/skills/greenfield/references/stacks/nextjs-react.md` |
+| React | `.claude/skills/greenfield/references/stacks/nextjs-react.md` |
+| Node.js / TypeScript | `.claude/skills/greenfield/references/stacks/typescript-node.md` |
+| Python | `.claude/skills/greenfield/references/stacks/python.md` |
+| Go | `.claude/skills/greenfield/references/stacks/go.md` |
 | Unknown/other | Use Claude's training knowledge for that stack |
 
 ---
@@ -145,7 +145,7 @@ AGENT_TEAMS="[true/false]" \
 PKG_MANAGER="[npm/pnpm/yarn/bun/pip/go/cargo]" \
 LINT_CMD="[detected lint command]" \
 TEST_CMD="[detected test command]" \
-bash /mnt/skills/user/greenfield/scripts/generate-settings.sh
+bash .claude/skills/greenfield/scripts/generate-settings.sh
 ```
 
 ### 5b — Rules
@@ -153,7 +153,7 @@ bash /mnt/skills/user/greenfield/scripts/generate-settings.sh
 ```bash
 STACK="[detected stack]" \
 PROJECT_DIR="[path]" \
-bash /mnt/skills/user/greenfield/scripts/generate-rules.sh
+bash .claude/skills/greenfield/scripts/generate-rules.sh
 ```
 
 ### 5c — Hooks
@@ -162,7 +162,7 @@ bash /mnt/skills/user/greenfield/scripts/generate-rules.sh
 LINT_CMD="[detected lint command]" \
 TEST_CMD="[detected test command]" \
 FORMATTER="[prettier/biome/ruff/gofmt]" \
-bash /mnt/skills/user/greenfield/scripts/generate-hooks.sh
+bash .claude/skills/greenfield/scripts/generate-hooks.sh
 ```
 
 ### 5d — CLAUDE.md
@@ -177,13 +177,13 @@ BUILD_CMD="[build command]" \
 TEST_CMD="[test command]" \
 LINT_CMD="[lint command]" \
 COMMIT_STYLE="[conventional/freeform]" \
-bash /mnt/skills/user/greenfield/scripts/generate-claude-md.sh
+bash .claude/skills/greenfield/scripts/generate-claude-md.sh
 ```
 
 ### 5e — .gitignore
 
 ```bash
-bash /mnt/skills/user/greenfield/scripts/generate-gitignore.sh
+bash .claude/skills/greenfield/scripts/generate-gitignore.sh
 ```
 
 ---
@@ -203,7 +203,7 @@ If conventional commits: use `chore(claude): initialize Claude Code configuratio
 ## Step 7 — CI/CD (if requested)
 
 Load templates from:
-`/mnt/skills/user/greenfield/references/ci-templates.md`
+`.claude/skills/greenfield/references/ci-templates.md`
 
 Generate `.github/workflows/` files using the exact commands from the interview.
 
@@ -973,9 +973,9 @@ It is read during Step 7 (CI/CD scaffold) of the skill execution.
 
 ---
 
-## Step 11 — Create `skills/greenfield/references/stacks/nextjs.md`
+## Step 11 — Create `skills/greenfield/references/stacks/nextjs-react.md`
 
-Copy the content from the previously generated `greenfield/stacks/nextjs.md` file.
+Copy the content from the previously generated `greenfield/stacks/nextjs-react.md` file.
 
 ---
 
@@ -1025,7 +1025,7 @@ skills/greenfield/references/artifact-specs.md
 skills/greenfield/references/ci-templates.md
 skills/greenfield/references/interview.md
 skills/greenfield/references/stacks/go.md
-skills/greenfield/references/stacks/nextjs.md
+skills/greenfield/references/stacks/nextjs-react.md
 skills/greenfield/references/stacks/python.md
 skills/greenfield/references/stacks/typescript-node.md
 skills/greenfield/scripts/detect-stack.sh

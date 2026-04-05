@@ -22,15 +22,7 @@ Run `/workflow` after this to install development commands and agents.
 
 ---
 
-## Step 1 — Preflight
-
-Run stack detection:
-
-```bash
-bash /mnt/skills/user/greenfield/scripts/detect-stack.sh
-```
-
-The script outputs JSON to stdout with: `stack`, `framework`, `lang`, `pkg_manager`, `formatter`, `test_runner`, `has_typescript`. Parse and store all values — they will be used as environment variables for the generator scripts.
+## Step 1 — Preflight & Stack Detection
 
 If `.claude/` already exists, ask:
 > "A `.claude/` directory already exists. This will overwrite it.
@@ -38,11 +30,15 @@ If `.claude/` already exists, ask:
 
 Wait for confirmation before proceeding.
 
----
+Run stack detection:
 
-## Step 2 — Stack Detection
+```bash
+bash .claude/skills/greenfield/scripts/detect-stack.sh
+```
 
-Read the JSON output from Step 1. If `stack` is `"unknown"`, ask the developer:
+The script outputs JSON to stdout with: `stack`, `framework`, `lang`, `pkg_manager`, `formatter`, `test_runner`, `has_typescript`. Parse and store all values — they will be used as environment variables for the generator scripts.
+
+If `stack` is `"unknown"`, ask the developer:
 > "I couldn't detect your stack. What are you building?
 > (e.g. Next.js, React, Node.js API, Python, Go, Rust, .NET)"
 
@@ -50,75 +46,68 @@ Update the detection values based on their answer.
 
 ---
 
-## Step 3 — Developer Interview
+## Step 2 — Developer Interview
 
 **Present all questions at once** before generating anything.
 Load the full question set from:
-`/mnt/skills/user/greenfield/references/interview.md`
+`.claude/skills/greenfield/references/interview.md`
 
-Core questions (always ask):
-1. **Project name** — free text (suggest the current directory name as default)
-2. **Project description** — 1–2 sentences
-3. **Confirm detected stack** — show what was found, ask to correct if wrong
-4. **Git setup** — init + first commit? (`init` / `done` / `skip`)
-5. **Agent teams** — enable CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS? (yes / no)
-6. **Commit style** — conventional commits or free-form?
-7. **CI/CD** — scaffold GitHub Actions? (yes / no — if yes, ask which: lint, test, build, deploy)
-
-**Wait for the developer to answer all questions before proceeding to Step 4.**
+Ask all 7 questions (project name, description, stack confirmation, git setup, agent teams, commit style, CI/CD). **Wait for the developer to answer all questions before proceeding to Step 3.**
 
 ---
 
-## Step 4 — Load Stack Knowledge
+## Step 3 — Load Stack Knowledge
 
 Read the appropriate stack reference file based on the confirmed stack:
 
 | Stack | File |
 |---|---|
-| Next.js | `/mnt/skills/user/greenfield/references/stacks/nextjs.md` |
-| React | `/mnt/skills/user/greenfield/references/stacks/nextjs.md` |
-| Node.js / TypeScript | `/mnt/skills/user/greenfield/references/stacks/typescript-node.md` |
-| Python | `/mnt/skills/user/greenfield/references/stacks/python.md` |
-| Go | `/mnt/skills/user/greenfield/references/stacks/go.md` |
+| Next.js | `.claude/skills/greenfield/references/stacks/nextjs-react.md` |
+| React | `.claude/skills/greenfield/references/stacks/nextjs-react.md` |
+| Node.js / TypeScript | `.claude/skills/greenfield/references/stacks/typescript-node.md` |
+| Python | `.claude/skills/greenfield/references/stacks/python.md` |
+| Go | `.claude/skills/greenfield/references/stacks/go.md` |
 | Unknown/other | Use Claude's training knowledge for that stack |
+
+Next.js and React share a reference file — it uses the `FRAMEWORK` value (`nextjs` or `react`) to dispatch stack-specific conventions (build output, lint defaults, directory structure).
 
 Extract the command mappings (`INSTALL_CMD`, `DEV_CMD`, `BUILD_CMD`, `TEST_CMD`, `LINT_CMD`) from the stack reference file based on the detected package manager.
 
 ---
 
-## Step 5 — Generate All Artifacts
+## Step 4 — Generate All Artifacts
 
 Run each script with the correct environment variables. All scripts require `PROJECT_DIR`.
 Scripts can run in parallel — they write to separate paths and have no interdependencies.
 
-### 5a — Settings
+### 4a — Settings
 
 ```bash
 PROJECT_DIR="$PWD" \
 AGENT_TEAMS="[true/false from Q5]" \
 PKG_MANAGER="[from detection]" \
-bash /mnt/skills/user/greenfield/scripts/generate-settings.sh
+bash .claude/skills/greenfield/scripts/generate-settings.sh
 ```
 
-### 5b — Rules
+### 4b — Rules
 
 ```bash
 PROJECT_DIR="$PWD" \
 STACK="[confirmed stack from Q3]" \
-bash /mnt/skills/user/greenfield/scripts/generate-rules.sh
+bash .claude/skills/greenfield/scripts/generate-rules.sh
 ```
 
-### 5c — Hooks
+### 4c — Hooks
 
 ```bash
 PROJECT_DIR="$PWD" \
 LINT_CMD="[from stack reference]" \
 TEST_CMD="[from stack reference]" \
 FORMATTER="[from detection]" \
-bash /mnt/skills/user/greenfield/scripts/generate-hooks.sh
+bash .claude/skills/greenfield/scripts/generate-hooks.sh
 ```
 
-### 5d — CLAUDE.md
+### 4d — CLAUDE.md
 
 ```bash
 PROJECT_DIR="$PWD" \
@@ -131,27 +120,27 @@ BUILD_CMD="[from stack reference]" \
 TEST_CMD="[from stack reference]" \
 LINT_CMD="[from stack reference]" \
 COMMIT_STYLE="[from Q6]" \
-bash /mnt/skills/user/greenfield/scripts/generate-claude-md.sh
+bash .claude/skills/greenfield/scripts/generate-claude-md.sh
 ```
 
-### 5e — .gitignore
+### 4e — .gitignore
 
 ```bash
 PROJECT_DIR="$PWD" \
-bash /mnt/skills/user/greenfield/scripts/generate-gitignore.sh
+bash .claude/skills/greenfield/scripts/generate-gitignore.sh
 ```
 
 Each script outputs JSON status to stdout (e.g. `{"status":"ok","files":[...]}`). Check that all return `"status":"ok"`. If any fail, report the error and stop.
 
 ---
 
-## Step 6 — Git Setup (if requested)
+## Step 5 — Git Setup (if requested)
 
 Only if the developer chose `init` in Q4:
 
 ```bash
 git init
-git add -A
+git add CLAUDE.md .claude/ .gitignore
 git commit -m "chore: initialize project with Claude Code configuration"
 ```
 
@@ -160,19 +149,26 @@ If free-form: use `Initialize project with Claude Code configuration`
 
 ---
 
-## Step 7 — CI/CD (if requested)
+## Step 6 — CI/CD (if requested)
 
 Only if the developer chose `yes` in Q7.
 
 Load templates from:
-`/mnt/skills/user/greenfield/references/ci-templates.md`
+`.claude/skills/greenfield/references/ci-templates.md`
 
 Generate `.github/workflows/` files for each selected workflow (lint, test, build, deploy).
 Replace placeholder values (`$INSTALL_CMD`, `$LINT_CMD`, `$TEST_CMD`, `$BUILD_CMD`) with the actual commands from the stack reference.
 
+If git was initialized in Step 5, stage and commit the CI files:
+
+```bash
+git add .github/
+git commit -m "ci: add GitHub Actions workflows"
+```
+
 ---
 
-## Step 8 — Completion
+## Step 7 — Completion
 
 Tell the developer what was created:
 
@@ -199,7 +195,7 @@ If CI/CD was scaffolded, list the workflow files created.
 
 ## Reference Files
 
-- Full interview questions: `references/interview.md`
-- Artifact content specs: `references/artifact-specs.md`
-- CI workflow templates: `references/ci-templates.md`
-- Stack conventions: `references/stacks/`
+- Full interview questions: `.claude/skills/greenfield/references/interview.md`
+- Artifact content specs: `.claude/skills/greenfield/references/artifact-specs.md`
+- CI workflow templates: `.claude/skills/greenfield/references/ci-templates.md`
+- Stack conventions: `.claude/skills/greenfield/references/stacks/`

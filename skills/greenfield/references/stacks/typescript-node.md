@@ -1,6 +1,6 @@
 # TypeScript / Node.js Stack Reference
 
-Loaded by SKILL.md Step 4 when `STACK` is `typescript-node`.
+Loaded by SKILL.md Step 3 when `STACK` is `typescript-node`.
 
 ---
 
