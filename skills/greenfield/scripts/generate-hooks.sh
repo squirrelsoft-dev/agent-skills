@@ -27,7 +27,7 @@ mkdir -p "$HOOKS_DIR"
 case "$FORMATTER" in
   prettier)      FMT_CMD='npx prettier --write "$FILE" 2>/dev/null || true' ;;
   biome)         FMT_CMD='npx @biomejs/biome format --write "$FILE" 2>/dev/null || true' ;;
-  ruff)          FMT_CMD='ruff format "$FILE" 2>/dev/null || black "$FILE" 2>/dev/null || true' ;;
+  ruff)          FMT_CMD='ruff format "$FILE" 2>/dev/null || true' ;;
   gofmt)         FMT_CMD='gofmt -w "$FILE" 2>/dev/null || true' ;;
   rustfmt)       FMT_CMD='rustfmt "$FILE" 2>/dev/null || true' ;;
   dotnet-format) FMT_CMD='dotnet format --include "$FILE" 2>/dev/null || true' ;;
@@ -85,7 +85,7 @@ AGENT_TYPE=$(echo "$INPUT" | jq -r '.agent_type // "main"')
 [[ "$AGENT_TYPE" == "hook-agent" ]] && exit 0
 ERRORS=""
 cd "$CLAUDE_PROJECT_DIR"
-UNCOMMITTED=$(git diff --name-only HEAD 2>/dev/null || echo "")
+UNCOMMITTED=$(git diff --name-only HEAD 2>/dev/null || git ls-files 2>/dev/null || echo "")
 MERGE_BASE=$(git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null || echo "")
 if [[ -n "$MERGE_BASE" ]]; then
   COMMITTED=$(git diff --name-only "$MERGE_BASE"...HEAD 2>/dev/null || echo "")
