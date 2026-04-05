@@ -9,8 +9,8 @@ echo "Detecting project stack..." >&2
 
 STACK="unknown"
 FRAMEWORK="unknown"
-PKG_MANAGER="npm"
-FORMATTER="prettier"
+PKG_MANAGER="unknown"
+FORMATTER="none"
 TEST_RUNNER="none"
 LANG="unknown"
 HAS_TYPESCRIPT="false"
@@ -18,6 +18,8 @@ HAS_TYPESCRIPT="false"
 # --- Node.js detection ---
 if [ -f "package.json" ]; then
   LANG="javascript"
+  PKG_MANAGER="npm"
+  FORMATTER="prettier"
 
   # Package manager
   [ -f "bun.lockb" ] && PKG_MANAGER="bun"
@@ -49,10 +51,11 @@ if [ -f "package.json" ]; then
     STACK="typescript-node"
   fi
 
-  # Test runner
-  grep -q '"vitest"' package.json 2>/dev/null && TEST_RUNNER="vitest"
-  grep -q '"jest"' package.json 2>/dev/null && TEST_RUNNER="jest"
-  grep -q '"mocha"' package.json 2>/dev/null && TEST_RUNNER="mocha"
+  # Test runner (priority: vitest > jest > mocha)
+  if grep -q '"vitest"' package.json 2>/dev/null; then TEST_RUNNER="vitest"
+  elif grep -q '"jest"' package.json 2>/dev/null; then TEST_RUNNER="jest"
+  elif grep -q '"mocha"' package.json 2>/dev/null; then TEST_RUNNER="mocha"
+  fi
 
 # --- Python detection ---
 elif [ -f "requirements.txt" ] || [ -f "pyproject.toml" ]; then
@@ -61,6 +64,10 @@ elif [ -f "requirements.txt" ] || [ -f "pyproject.toml" ]; then
   PKG_MANAGER="pip"
   FORMATTER="ruff"
   TEST_RUNNER="pytest"
+
+  # Package manager (poetry / uv / pip)
+  grep -q "poetry" pyproject.toml 2>/dev/null && PKG_MANAGER="poetry"
+  grep -q "\[tool.uv\]" pyproject.toml 2>/dev/null && PKG_MANAGER="uv"
 
   # Sub-framework
   if grep -qE "fastapi|django|flask" requirements.txt pyproject.toml 2>/dev/null; then
@@ -88,7 +95,7 @@ elif [ -f "Cargo.toml" ]; then
   FRAMEWORK="rust"
 
 # --- .NET detection ---
-elif ls *.csproj 2>/dev/null | grep -q .; then
+elif find . -maxdepth 1 -name "*.csproj" 2>/dev/null | grep -q .; then
   LANG="csharp"
   STACK="dotnet"
   PKG_MANAGER="dotnet"
