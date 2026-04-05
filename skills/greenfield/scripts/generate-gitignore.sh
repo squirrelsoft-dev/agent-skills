@@ -5,7 +5,11 @@ set -e
 # Appends Claude Code personal/generated file entries to .gitignore.
 # Outputs JSON status to stdout. Status messages to stderr.
 #
-# Env vars: none
+# Env vars: PROJECT_DIR
+
+[[ -z "${PROJECT_DIR:-}" ]] && echo "Error: PROJECT_DIR is required" >&2 && exit 1
+
+GITIGNORE="$PROJECT_DIR/.gitignore"
 
 echo "Updating .gitignore..." >&2
 
@@ -19,24 +23,26 @@ ENTRIES=(
 )
 
 # Create .gitignore if it doesn't exist
-touch .gitignore
+touch "$GITIGNORE"
 
 # Collect entries that aren't already present
 MISSING=()
 for ENTRY in "${ENTRIES[@]}"; do
-  if ! grep -qF "$ENTRY" .gitignore 2>/dev/null; then
+  if ! grep -qF "$ENTRY" "$GITIGNORE" 2>/dev/null; then
     MISSING+=("$ENTRY")
   fi
 done
 
 # Add section header + missing entries
 if [ "${#MISSING[@]}" -gt 0 ]; then
-  if ! grep -q "Claude Code" .gitignore 2>/dev/null; then
-    echo "" >> .gitignore
-    echo "# Claude Code — personal and generated files" >> .gitignore
+  if ! grep -qF "# Claude Code" "$GITIGNORE" 2>/dev/null; then
+    if [ -s "$GITIGNORE" ]; then
+      echo "" >> "$GITIGNORE"
+    fi
+    echo "# Claude Code — personal and generated files" >> "$GITIGNORE"
   fi
   for ENTRY in "${MISSING[@]}"; do
-    echo "$ENTRY" >> .gitignore
+    echo "$ENTRY" >> "$GITIGNORE"
   done
 fi
 
