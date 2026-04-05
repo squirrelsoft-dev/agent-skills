@@ -23,6 +23,12 @@ Go has a single toolchain — no package manager variants:
 
 ---
 
+## Framework Variants
+
+Go has no framework variants — `FRAMEWORK` is always `go`.
+
+---
+
 ## Directory Structure
 
 ```

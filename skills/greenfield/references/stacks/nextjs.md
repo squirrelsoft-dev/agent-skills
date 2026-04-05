@@ -21,18 +21,28 @@ Resolve env vars using `PKG_MANAGER` as the column key:
 |---|---|---|---|---|
 | `vitest` | `npx vitest run` | `pnpm vitest run` | `yarn vitest run` | `bun vitest run` |
 | `jest` | `npx jest` | `pnpm jest` | `yarn jest` | `bun jest` |
+| `mocha` | `npx mocha` | `pnpm mocha` | `yarn mocha` | `bun mocha` |
 | (none) | `echo 'no tests configured'` | `echo 'no tests configured'` | `echo 'no tests configured'` | `echo 'no tests configured'` |
+
+### LINT_CMD by FORMATTER
+
+> The default row assumes `package.json` defines `"lint": "next lint"` (Next.js default). If no lint script exists, use the eslint/biome row.
+
+| FORMATTER | npm | pnpm | yarn | bun |
+|---|---|---|---|---|
+| `prettier` (default) | `npm run lint` | `pnpm lint` | `yarn lint` | `bun run lint` |
+| `biome` | `npx biome check .` | `pnpm biome check .` | `yarn biome check .` | `bun biome check .` |
 
 ---
 
 ## Framework Variants
 
 ### FRAMEWORK=nextjs
-- `LINT_CMD` → prefer `next lint` via the table above (package.json `"lint": "next lint"` is standard)
+- `LINT_CMD` table assumes `package.json` defines `"lint": "next lint"` (Next.js default). If no lint script exists, fall back to `npx eslint .`
 - Build output: `.next/`
 - Add `.next/` to `.gitignore`
 
-### FRAMEWORK=react (no Next.js)
+### FRAMEWORK=react
 - No built-in lint command — fall back to `eslint .` if eslint is present
 - Build output depends on bundler (vite → `dist/`, CRA → `build/`)
 - `DEV_CMD` is still `$PKG_MANAGER run dev` (vite/CRA both use this)

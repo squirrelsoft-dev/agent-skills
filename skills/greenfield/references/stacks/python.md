@@ -15,6 +15,8 @@ Resolve env vars using `PKG_MANAGER` as the column key:
 | `TEST_CMD` | `python -m pytest` | `poetry run pytest` | `uv run pytest` |
 | `LINT_CMD` | `ruff check .` | `poetry run ruff check .` | `uv run ruff check .` |
 
+> **Note:** For pip, if `pyproject.toml` exists without `requirements.txt`, use `INSTALL_CMD` = `pip install -e .` instead.
+
 ### DEV_CMD by FRAMEWORK
 
 | FRAMEWORK | pip | poetry | uv |
@@ -36,7 +38,7 @@ Resolve env vars using `PKG_MANAGER` as the column key:
 ### FRAMEWORK=django
 - Entry point: `manage.py`
 - `BUILD_CMD` is not typically used — Django runs directly
-- Uses its own test runner: override `TEST_CMD` to `python manage.py test` (or `pytest` with `pytest-django`)
+- Override `TEST_CMD` to `python manage.py test` if `pytest-django` is not in dependencies
 
 ### FRAMEWORK=flask
 - Entry point: `app.py` or `app/__init__.py`

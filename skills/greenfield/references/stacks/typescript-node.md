@@ -40,8 +40,12 @@ Resolve env vars using `PKG_MANAGER` as the column key:
 - `DEV_CMD` may not apply — use `tsx watch` if there's a runnable entry point
 - Build typically uses `tsup` or `tsc` to produce `dist/`
 
-### FORMATTER override
-- If `FORMATTER=biome`, replace `eslint .` with `biome check .` in `LINT_CMD`
+### LINT_CMD by FORMATTER
+
+| FORMATTER | npm | pnpm | yarn | bun |
+|---|---|---|---|---|
+| `prettier` (default) | `npx eslint .` | `pnpm eslint .` | `yarn eslint .` | `bun eslint .` |
+| `biome` | `npx biome check .` | `pnpm biome check .` | `yarn biome check .` | `bun biome check .` |
 
 ---
 
