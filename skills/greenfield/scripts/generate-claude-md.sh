@@ -25,6 +25,8 @@ GENERATED_FILES=()
 
 echo "Generating CLAUDE.md..." >&2
 
+mkdir -p "$PROJECT_DIR"
+
 cat > "$PROJECT_DIR/CLAUDE.md" <<CLAUDEMD
 # ${PROJECT_NAME}
 
