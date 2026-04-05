@@ -23,12 +23,13 @@ ENTRIES=(
 )
 
 # Create .gitignore if it doesn't exist
+mkdir -p "$PROJECT_DIR"
 touch "$GITIGNORE"
 
 # Collect entries that aren't already present
 MISSING=()
 for ENTRY in "${ENTRIES[@]}"; do
-  if ! grep -qF "$ENTRY" "$GITIGNORE" 2>/dev/null; then
+  if ! grep -qxF "$ENTRY" "$GITIGNORE" 2>/dev/null; then
     MISSING+=("$ENTRY")
   fi
 done
