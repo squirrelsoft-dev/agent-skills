@@ -10,12 +10,12 @@ Resolve env vars using `PKG_MANAGER` as the column key:
 
 | Env var | pip | poetry | uv |
 |---|---|---|---|
-| `INSTALL_CMD` | `pip install -r requirements.txt` | `poetry install` | `uv sync` |
+| `INSTALL_CMD` | `pip install -e .` | `poetry install` | `uv sync` |
 | `BUILD_CMD` | `python -m build` | `poetry build` | `uv build` |
 | `TEST_CMD` | `python -m pytest` | `poetry run pytest` | `uv run pytest` |
 | `LINT_CMD` | `ruff check .` | `poetry run ruff check .` | `uv run ruff check .` |
 
-> **Note:** For pip, if `pyproject.toml` exists without `requirements.txt`, use `INSTALL_CMD` = `pip install -e .` instead.
+> **Note:** For pip, if only `requirements.txt` exists (no `pyproject.toml`), use `INSTALL_CMD` = `pip install -r requirements.txt` instead.
 
 ### DEV_CMD by FRAMEWORK
 
@@ -49,7 +49,7 @@ Resolve env vars using `PKG_MANAGER` as the column key:
 ## Directory Structure
 
 ```
-src/ or app/          # Application code
+app/                  # Application code
   __init__.py
   main.py             # Entry point
 tests/                # Test files
