@@ -33,7 +33,7 @@ Wait for confirmation before proceeding.
 Run stack detection:
 
 ```bash
-bash .claude/skills/greenfield/scripts/detect-stack.sh
+bash "${CLAUDE_SKILL_DIR}/scripts/detect-stack.sh"
 ```
 
 The script outputs JSON to stdout with: `stack`, `framework`, `lang`, `pkg_manager`, `formatter`, `test_runner`, `has_typescript`. Parse and store all values — they will be used as environment variables for the generator scripts.
@@ -50,7 +50,7 @@ Update the detection values based on their answer.
 
 **Present all questions at once** before generating anything.
 Load the full question set from:
-`.claude/skills/greenfield/references/interview.md`
+`${CLAUDE_SKILL_DIR}/references/interview.md`
 
 Ask all 7 questions (project name, description, stack confirmation, git setup, agent teams, commit style, CI/CD). **Wait for the developer to answer all questions before proceeding to Step 3.**
 
@@ -62,11 +62,11 @@ Read the appropriate stack reference file based on the confirmed stack:
 
 | Stack | File |
 |---|---|
-| Next.js | `.claude/skills/greenfield/references/stacks/nextjs.md` |
-| React | `.claude/skills/greenfield/references/stacks/react.md` |
-| Node.js / TypeScript | `.claude/skills/greenfield/references/stacks/typescript-node.md` |
-| Python | `.claude/skills/greenfield/references/stacks/python.md` |
-| Go | `.claude/skills/greenfield/references/stacks/go.md` |
+| Next.js | `${CLAUDE_SKILL_DIR}/references/stacks/nextjs.md` |
+| React | `${CLAUDE_SKILL_DIR}/references/stacks/react.md` |
+| Node.js / TypeScript | `${CLAUDE_SKILL_DIR}/references/stacks/typescript-node.md` |
+| Python | `${CLAUDE_SKILL_DIR}/references/stacks/python.md` |
+| Go | `${CLAUDE_SKILL_DIR}/references/stacks/go.md` |
 | Unknown/other | Use Claude's training knowledge for that stack |
 
 Extract the command mappings (`INSTALL_CMD`, `DEV_CMD`, `BUILD_CMD`, `TEST_CMD`, `LINT_CMD`) from the stack reference file based on the detected package manager.
@@ -84,7 +84,7 @@ Scripts can run in parallel — they write to separate paths and have no interde
 PROJECT_DIR="$PWD" \
 AGENT_TEAMS="[true/false from Q5]" \
 PKG_MANAGER="[from detection]" \
-bash .claude/skills/greenfield/scripts/generate-settings.sh
+bash "${CLAUDE_SKILL_DIR}/scripts/generate-settings.sh"
 ```
 
 ### 4b — Rules
@@ -92,7 +92,7 @@ bash .claude/skills/greenfield/scripts/generate-settings.sh
 ```bash
 PROJECT_DIR="$PWD" \
 STACK="[confirmed stack from Q3]" \
-bash .claude/skills/greenfield/scripts/generate-rules.sh
+bash "${CLAUDE_SKILL_DIR}/scripts/generate-rules.sh"
 ```
 
 ### 4c — Hooks
@@ -102,7 +102,7 @@ PROJECT_DIR="$PWD" \
 LINT_CMD="[from stack reference]" \
 TEST_CMD="[from stack reference]" \
 FORMATTER="[from detection]" \
-bash .claude/skills/greenfield/scripts/generate-hooks.sh
+bash "${CLAUDE_SKILL_DIR}/scripts/generate-hooks.sh"
 ```
 
 ### 4d — CLAUDE.md
@@ -118,14 +118,14 @@ BUILD_CMD="[from stack reference]" \
 TEST_CMD="[from stack reference]" \
 LINT_CMD="[from stack reference]" \
 COMMIT_STYLE="[from Q6]" \
-bash .claude/skills/greenfield/scripts/generate-claude-md.sh
+bash "${CLAUDE_SKILL_DIR}/scripts/generate-claude-md.sh"
 ```
 
 ### 4e — .gitignore
 
 ```bash
 PROJECT_DIR="$PWD" \
-bash .claude/skills/greenfield/scripts/generate-gitignore.sh
+bash "${CLAUDE_SKILL_DIR}/scripts/generate-gitignore.sh"
 ```
 
 Each script outputs JSON status to stdout (e.g. `{"status":"ok","files":[...]}`). Check that all return `"status":"ok"`. If any fail, report the error and stop.
@@ -153,7 +153,7 @@ git commit -m "[commit message from above]"
 Only if the developer chose `yes` in Q7.
 
 Load templates from:
-`.claude/skills/greenfield/references/ci-templates.md`
+`${CLAUDE_SKILL_DIR}/references/ci-templates.md`
 
 Generate `.github/workflows/` files for each selected workflow (lint, test, build, deploy).
 Replace placeholder values (`$PKG_MANAGER`, `$INSTALL_CMD`, `$LINT_CMD`, `$TEST_CMD`, `$BUILD_CMD`) with the actual values from stack detection and the stack reference.
@@ -194,7 +194,7 @@ If CI/CD was scaffolded, list the workflow files created.
 
 ## Reference Files
 
-- Full interview questions: `.claude/skills/greenfield/references/interview.md`
-- Artifact content specs: `.claude/skills/greenfield/references/artifact-specs.md`
-- CI workflow templates: `.claude/skills/greenfield/references/ci-templates.md`
-- Stack conventions: `.claude/skills/greenfield/references/stacks/`
+- Full interview questions: `${CLAUDE_SKILL_DIR}/references/interview.md`
+- Artifact content specs: `${CLAUDE_SKILL_DIR}/references/artifact-specs.md`
+- CI workflow templates: `${CLAUDE_SKILL_DIR}/references/ci-templates.md`
+- Stack conventions: `${CLAUDE_SKILL_DIR}/references/stacks/`
