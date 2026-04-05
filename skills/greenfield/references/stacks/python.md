@@ -1,6 +1,6 @@
 # Python Stack Reference
 
-Loaded by SKILL.md Step 4 when `STACK` is `python`.
+Loaded by SKILL.md Step 3 when `STACK` is `python`.
 
 ---
 
