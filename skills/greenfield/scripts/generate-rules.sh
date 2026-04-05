@@ -120,7 +120,7 @@ paths:
 
 - Validate all input — use zod or equivalent
 - Return consistent error shapes with appropriate HTTP status codes
-- Use parameterized queries — never raw string interpolation for SQL
+- Never expose internal error details in production responses
 - Include rate limiting on public-facing endpoints
 RULE
     GENERATED_FILES+=(".claude/rules/api.md")
@@ -130,5 +130,5 @@ esac
 echo "Wrote ${#GENERATED_FILES[@]} rules files" >&2
 
 # Output JSON list of created files
-FILES_JSON=$(printf '"%s",' "${GENERATED_FILES[@]}" | sed 's/,$//')
-echo "{\"status\":\"ok\",\"files\":[$FILES_JSON]}"
+printf -v FILES_JSON '"%s",' "${GENERATED_FILES[@]}"
+printf '{"status":"ok","files":[%s]}\n' "${FILES_JSON%,}"
