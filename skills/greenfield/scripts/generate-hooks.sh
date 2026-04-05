@@ -8,8 +8,11 @@ set -e
 # Env vars: PROJECT_DIR, LINT_CMD, TEST_CMD, FORMATTER
 
 [[ -z "${PROJECT_DIR:-}" ]] && echo "Error: PROJECT_DIR is required" >&2 && exit 1
+
 [[ -z "${LINT_CMD:-}" ]] && echo "Error: LINT_CMD is required" >&2 && exit 1
+
 [[ -z "${TEST_CMD:-}" ]] && echo "Error: TEST_CMD is required" >&2 && exit 1
+
 [[ -z "${FORMATTER:-}" ]] && echo "Error: FORMATTER is required" >&2 && exit 1
 
 GENERATED_FILES=()
@@ -82,12 +85,19 @@ AGENT_TYPE=$(echo "$INPUT" | jq -r '.agent_type // "main"')
 [[ "$AGENT_TYPE" == "hook-agent" ]] && exit 0
 ERRORS=""
 cd "$CLAUDE_PROJECT_DIR"
-CHANGED=$(git diff --name-only HEAD 2>/dev/null || echo "")
+UNCOMMITTED=$(git diff --name-only HEAD 2>/dev/null || echo "")
+MERGE_BASE=$(git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null || echo "")
+if [[ -n "$MERGE_BASE" ]]; then
+  COMMITTED=$(git diff --name-only "$MERGE_BASE"...HEAD 2>/dev/null || echo "")
+else
+  COMMITTED=""
+fi
+CHANGED="${UNCOMMITTED}${COMMITTED}"
 [[ -z "$CHANGED" ]] && exit 0
-if ! output=$(${LINT_CMD} 2>&1); then
+if ! output=$(eval "$LINT_CMD" 2>&1); then
   ERRORS+="\n## Lint Failed\n\`\`\`\n${output}\n\`\`\`\n"
 fi
-if ! output=$(${TEST_CMD} 2>&1); then
+if ! output=$(eval "$TEST_CMD" 2>&1); then
   ERRORS+="\n## Tests Failed\n\`\`\`\n${output}\n\`\`\`\n"
 fi
 if [[ -n "$ERRORS" ]]; then
