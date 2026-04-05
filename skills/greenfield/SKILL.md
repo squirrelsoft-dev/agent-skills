@@ -1,12 +1,12 @@
 ---
 name: greenfield
 description: >
-  Set up Claude Code configuration for a brand new project from scratch.
-  Runs a developer interview, detects the stack, then generates CLAUDE.md,
-  .claude/rules/, .claude/hooks/, settings.json, and settings.local.json —
-  all tailored to the actual stack. Trigger phrases: "set up Claude Code",
-  "initialize Claude", "run greenfield setup", "/greenfield", "configure
-  Claude for this project", "set up this new project".
+  Configure Claude Code for a brand new project. Detects your stack, runs a
+  short interview, then generates CLAUDE.md, rules, hooks, and settings tailored
+  to your project. Invoke manually with /greenfield or "set up Claude Code",
+  "initialize Claude", "configure Claude for this project".
+disable-model-invocation: true
+allowed-tools: Bash Read Write
 ---
 
 # Greenfield Setup
