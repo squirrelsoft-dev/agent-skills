@@ -27,7 +27,7 @@ It defines the questions to ask the developer before generating any artifacts.
 - **Notes:** Used in CLAUDE.md project overview section.
 
 ### Q3 — Confirm detected stack
-- **Ask (stack detected):** "I detected **[stack]** ([lang]) with [pkg_manager]. Is that correct? If not, what are you building?"
+- **Ask (stack detected):** "I detected **[stack]** ([lang]) with [pkg_manager], [framework], [formatter], and [test_runner]. Is that correct? If not, what are you building?"
 - **Ask (stack unknown):** "I couldn't detect your stack. What are you building? (e.g. Next.js, React, Node.js API, Python, Go, Rust, .NET)"
 - **Type:** confirm or correct (required)
 - **Env var:** `STACK` (may override detect-stack.sh output)
