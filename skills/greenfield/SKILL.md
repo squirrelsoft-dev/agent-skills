@@ -94,12 +94,74 @@ Extract the command mappings (`INSTALL_CMD`, `DEV_CMD`, `BUILD_CMD`, `TEST_CMD`,
 
 ---
 
-## Step 4 — Generate All Artifacts
+## Step 3a — Security Tools Check
+
+Check whether security tools used by the quality gate are installed:
+
+```bash
+STACK="[confirmed stack]" \
+bash "${CLAUDE_SKILL_DIR}/scripts/check-security-tools.sh"
+```
+
+The script outputs JSON with the status of gitleaks, semgrep, trivy, and oxlint (oxlint is skipped for non-Node stacks).
+
+**If all relevant tools are installed**, print a brief confirmation and continue:
+```
+✅ Security tools: gitleaks ✓  semgrep ✓  trivy ✓
+```
+
+**If any tools are missing**, present a summary using `AskUserQuestion`:
+
+```
+⚠️  Some security tools used by the quality gate are not installed:
+
+  gitleaks — Secret/credential detection (finds API keys, tokens, passwords)
+  semgrep  — SAST scanner (injection, XSS, OWASP Top 10)
+  trivy    — Vulnerability scanner (dependencies, containers, IaC)
+
+The quality gate will skip these checks until they're installed.
+```
+
+Offer three choices:
+- **yes** — install all missing tools automatically
+- **no** — skip, continue without them
+- **list** — show platform-appropriate install commands
+
+### If "yes":
+
+Save the check output to a temp file and run the installer:
+
+```bash
+STACK="[confirmed stack]" \
+bash "${CLAUDE_SKILL_DIR}/scripts/check-security-tools.sh" > /tmp/gf-tools.json
+STACK="[confirmed stack]" \
+TOOLS_JSON="/tmp/gf-tools.json" \
+bash "${CLAUDE_SKILL_DIR}/scripts/install-security-tools.sh"
+```
+
+Report which tools installed successfully and which failed. For failures, show the manual install command.
+
+### If "no":
+
+```
+Noted. The quality gate will skip missing tools gracefully.
+Install them anytime and restart Claude Code — the gate will pick them up.
+```
+
+Continue to Step 5.
+
+### If "list":
+
+Print manual install commands based on the detected platform from the JSON output (e.g. brew, apt-get, pip). Continue to Step 5.
+
+---
+
+## Step 5 — Generate All Artifacts
 
 Run each script with the correct environment variables. All scripts require `PROJECT_DIR`.
 Scripts can run in parallel — they write to separate paths and have no interdependencies.
 
-### 4a — Settings
+### 5a — Settings
 
 ```bash
 PROJECT_DIR="$PWD" \
@@ -108,7 +170,7 @@ PKG_MANAGER="[from detection]" \
 bash "${CLAUDE_SKILL_DIR}/scripts/generate-settings.sh"
 ```
 
-### 4b — Rules
+### 5b — Rules
 
 ```bash
 PROJECT_DIR="$PWD" \
@@ -116,7 +178,7 @@ STACK="[confirmed stack from Q3]" \
 bash "${CLAUDE_SKILL_DIR}/scripts/generate-rules.sh"
 ```
 
-### 4c — Hooks
+### 5c — Hooks
 
 ```bash
 PROJECT_DIR="$PWD" \
@@ -126,7 +188,7 @@ FORMATTER="[from detection]" \
 bash "${CLAUDE_SKILL_DIR}/scripts/generate-hooks.sh"
 ```
 
-### 4d — CLAUDE.md
+### 5d — CLAUDE.md
 
 ```bash
 PROJECT_DIR="$PWD" \
@@ -142,7 +204,7 @@ COMMIT_STYLE="[from Q6]" \
 bash "${CLAUDE_SKILL_DIR}/scripts/generate-claude-md.sh"
 ```
 
-### 4e — .gitignore
+### 5e — .gitignore
 
 ```bash
 PROJECT_DIR="$PWD" \
@@ -153,7 +215,7 @@ Each script outputs JSON status to stdout (e.g. `{"status":"ok","files":[...]}`)
 
 ---
 
-## Step 5 — Git Setup (if requested)
+## Step 6 — Git Setup (if requested)
 
 Only if the developer chose `init` in Q4.
 
@@ -169,7 +231,7 @@ git commit -m "[commit message from above]"
 
 ---
 
-## Step 6 — CI/CD (if requested)
+## Step 7 — CI/CD (if requested)
 
 Only if the developer chose `yes` in Q7.
 
@@ -179,7 +241,7 @@ Load templates from:
 Generate `.github/workflows/` files for each selected workflow (lint, test, build, deploy).
 Replace placeholder values (`$PKG_MANAGER`, `$INSTALL_CMD`, `$LINT_CMD`, `$TEST_CMD`, `$BUILD_CMD`) with the actual values from stack detection and the stack reference.
 
-If git was initialized in Step 5, stage and commit the CI files:
+If git was initialized in Step 6, stage and commit the CI files:
 
 ```bash
 git add .github/
@@ -188,7 +250,7 @@ git commit -m "ci: add GitHub Actions workflows"
 
 ---
 
-## Step 7 — Completion
+## Step 8 — Completion
 
 Tell the developer what was created:
 
