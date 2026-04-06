@@ -355,10 +355,12 @@ Format command by `FORMATTER` value:
 ### stop-quality-gate.sh
 
 **Hook type:** Stop, SubagentStop
-**Purpose:** Run lint + test before task completion. Blocks if either fails.
+**Purpose:** Run security checks, lint, and tests before task completion. Uses JSON decision protocol — blocks if any check fails.
 **Env vars:** `LINT_CMD`, `TEST_CMD`, `CLAUDE_PROJECT_DIR`
 
 **Note:** `LINT_CMD` and `TEST_CMD` must be exported as environment variables by `generate-hooks.sh` (hardcoded into the script at generation time, not read from the shell at runtime). This avoids `set -u` failures.
+
+**Protocol:** All decision paths emit JSON to stdout: `{"decision":"approve"}` or `{"decision":"block","reason":"..."}`. Never use exit codes or stderr to signal block/approve.
 
 ```bash
 #!/usr/bin/env bash
@@ -367,20 +369,34 @@ LINT_CMD=<hardcoded at generation time>
 TEST_CMD=<hardcoded at generation time>
 INPUT=$(cat)
 STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false')
-[[ "$STOP_HOOK_ACTIVE" == "true" ]] && exit 0
+[[ "$STOP_HOOK_ACTIVE" == "true" ]] && echo '{"decision":"approve"}' && exit 0
 AGENT_TYPE=$(echo "$INPUT" | jq -r '.agent_type // "main"')
-[[ "$AGENT_TYPE" == "hook-agent" ]] && exit 0
+[[ "$AGENT_TYPE" == "hook-agent" ]] && echo '{"decision":"approve"}' && exit 0
 ERRORS=""
 cd "$CLAUDE_PROJECT_DIR"
-UNCOMMITTED=$(git diff --name-only HEAD 2>/dev/null || git ls-files 2>/dev/null || echo "")
+UNCOMMITTED=$(git diff --name-only HEAD 2>/dev/null || echo "")
+UNTRACKED=$(git ls-files --others --exclude-standard 2>/dev/null || echo "")
 MERGE_BASE=$(git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null || echo "")
 if [[ -n "$MERGE_BASE" ]]; then
   COMMITTED=$(git diff --name-only "$MERGE_BASE"...HEAD 2>/dev/null || echo "")
 else
   COMMITTED=""
 fi
-CHANGED="${UNCOMMITTED}${COMMITTED}"
-[[ -z "$CHANGED" ]] && exit 0
+CHANGED="${UNCOMMITTED}${UNTRACKED}${COMMITTED}"
+[[ -z "$CHANGED" ]] && echo '{"decision":"approve"}' && exit 0
+# Security — secret detection (skips gracefully if not installed)
+if command -v gitleaks &>/dev/null; then
+  if output=$(gitleaks detect --no-git --source=. --verbose 2>&1 | grep -E "Secret|Finding|leak"); then
+    [[ -n "$output" ]] && ERRORS+="\n## Secrets Detected (gitleaks)\n\`\`\`\n${output}\n\`\`\`\n"
+  fi
+fi
+# Security — SAST (skips gracefully if not installed)
+if command -v semgrep &>/dev/null; then
+  if output=$(semgrep --config=auto --quiet 2>/dev/null | grep -v "^$"); then
+    [[ -n "$output" ]] && ERRORS+="\n## Security Issues (semgrep)\n\`\`\`\n${output}\n\`\`\`\n"
+  fi
+fi
+# Lint
 if ! output=$(eval "$LINT_CMD" 2>&1); then
   ERRORS+="\n## Lint Failed\n\`\`\`\n${output}\n\`\`\`\n"
 fi
@@ -388,9 +404,11 @@ if ! output=$(eval "$TEST_CMD" 2>&1); then
   ERRORS+="\n## Tests Failed\n\`\`\`\n${output}\n\`\`\`\n"
 fi
 if [[ -n "$ERRORS" ]]; then
-  printf "Quality gate failed — fix before completing:\n%b" "$ERRORS" >&2
-  exit 2
+  REASON=$(printf '%b' "$ERRORS" | jq -Rs .)
+  echo "{\"decision\":\"block\",\"reason\":$REASON}"
+  exit 0
 fi
+echo '{"decision":"approve"}'
 exit 0
 ```
 
