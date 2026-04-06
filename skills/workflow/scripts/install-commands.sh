@@ -12,7 +12,7 @@ REFS="$SCRIPT_DIR/../references/commands"
 mkdir -p .claude/commands
 
 ORCHESTRATION="${ORCHESTRATION:-subagents}"
-COMMANDS="${COMMANDS:-breakdown,commit,review,pr,fix-issue,security-scan,triage}"
+COMMANDS="${COMMANDS:-breakdown,commit,review,pr,fix-issue,security-scan,triage,update-skills}"
 
 # breakdown / spec / work — install mode-specific version
 if echo "$COMMANDS" | grep -q "breakdown"; then
@@ -35,7 +35,8 @@ echo "$COMMANDS" | grep -q "pr"        && cp "$REFS/pr.md"                  .cla
 echo "$COMMANDS" | grep -q "pr"        && cp "$REFS/squash-pr.md"           .claude/commands/squash-pr.md
 echo "$COMMANDS" | grep -q "pr"        && cp "$REFS/address-pr-comments.md" .claude/commands/address-pr-comments.md
 echo "$COMMANDS" | grep -q "fix-issue" && cp "$REFS/fix-issue.md"           .claude/commands/fix-issue.md
-echo "$COMMANDS" | grep -q "security"  && cp "$REFS/security-scan.md"       .claude/commands/security-scan.md
+echo "$COMMANDS" | grep -q "security"       && cp "$REFS/security-scan.md"       .claude/commands/security-scan.md
+echo "$COMMANDS" | grep -q "update-skills"  && cp "$REFS/update-skills.md"      .claude/commands/update-skills.md
 
 INSTALLED=$(ls .claude/commands/ | tr '\n' ' ')
 echo "Commands installed: $INSTALLED" >&2

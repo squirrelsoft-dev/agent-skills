@@ -40,6 +40,7 @@ teardown() { common_teardown; }
   assert_file_exists "$TEST_TEMP_DIR/.claude/commands/address-pr-comments.md"
   assert_file_exists "$TEST_TEMP_DIR/.claude/commands/fix-issue.md"
   assert_file_exists "$TEST_TEMP_DIR/.claude/commands/security-scan.md"
+  assert_file_exists "$TEST_TEMP_DIR/.claude/commands/update-skills.md"
 }
 
 @test "install-commands: respects COMMANDS subset" {

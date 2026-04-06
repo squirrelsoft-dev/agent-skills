@@ -8,7 +8,7 @@ setup() {
   cd "$TEST_TEMP_DIR"
 
   export ORCHESTRATION="teams"
-  export COMMANDS="breakdown,commit,review,pr,fix-issue,security-scan,triage"
+  export COMMANDS="breakdown,commit,review,pr,fix-issue,security-scan,triage,update-skills"
   export STACK="nextjs"
 
   # Detect tools
@@ -28,7 +28,7 @@ setup() {
 
 teardown() { common_teardown; }
 
-@test "e2e/teams: all 10 commands installed" {
+@test "e2e/teams: all 11 commands installed" {
   assert_file_exists "$TEST_TEMP_DIR/.claude/commands/breakdown.md"
   assert_file_exists "$TEST_TEMP_DIR/.claude/commands/spec.md"
   assert_file_exists "$TEST_TEMP_DIR/.claude/commands/work.md"
@@ -39,6 +39,7 @@ teardown() { common_teardown; }
   assert_file_exists "$TEST_TEMP_DIR/.claude/commands/address-pr-comments.md"
   assert_file_exists "$TEST_TEMP_DIR/.claude/commands/fix-issue.md"
   assert_file_exists "$TEST_TEMP_DIR/.claude/commands/security-scan.md"
+  assert_file_exists "$TEST_TEMP_DIR/.claude/commands/update-skills.md"
 }
 
 @test "e2e/teams: breakdown is teams variant" {

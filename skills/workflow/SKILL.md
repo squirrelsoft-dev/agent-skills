@@ -60,6 +60,7 @@ Setting up your development workflow. A few questions:
    e) /fix-issue                — implement a GitHub issue end-to-end    ✓
    f) /security-scan            — on-demand deep security scan           ✓
    g) /triage                   — GitHub issue analysis (requires gh)    ✓
+   h) /update-skills            — find and install skills for your deps  ✓
 ```
 
 Wait for response before proceeding.
@@ -157,6 +158,7 @@ Commands installed:
   /fix-issue                  — implement a GitHub issue end-to-end
   /security-scan              — on-demand deep security scan
   /triage                     — GitHub issue analysis and planning
+  /update-skills              — find and install skills for project dependencies
 
 Agents installed:
   architect                           — plans features and architecture
