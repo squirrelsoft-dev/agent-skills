@@ -119,7 +119,62 @@ Then ask these questions in the same message:
 4. Commit style going forward? — detected style / conventional commits / free-form
 5. Scaffold GitHub Actions CI if none detected? — yes / no
 
-**Wait for developer response before proceeding to Step 4.**
+**Wait for developer response before proceeding to Step 3b.**
+
+---
+
+## Step 3b — Architectural Analysis
+
+After the developer confirms script findings, run a deeper analysis of the
+actual codebase to identify patterns that scripts can't detect.
+
+Load the investigation guide:
+`${CLAUDE_SKILL_DIR}/references/architecture-analysis.md`
+
+Use an Explore subagent (`context: fork`) to read the codebase. The subagent
+should use the confirmed stack, org pattern, and file locations from the
+analysis JSON as a starting point to know where to look.
+
+### What to investigate
+
+1. **Dependency and call patterns** — centralized clients, import graph, service layers
+2. **Architectural boundaries** — top-level directory responsibilities, frozen/legacy areas
+3. **Error handling patterns** — centralized handlers, custom error classes, consistent shapes
+4. **Auth and permissions patterns** — middleware, guards, decorators, role checks
+5. **State management patterns** — local vs global state, server state (React Query/SWR)
+6. **Testing patterns** — shared utilities, custom matchers, mock strategies
+7. **Git history patterns** — co-change coupling, high-churn areas (if `gh` CLI available)
+
+### Output
+
+Generate additional `.claude/rules/` files only when genuine patterns are found.
+Do not pad with generic advice. Example files:
+- `architecture.md` — if clear architectural layers or centralized patterns found
+- `legacy.md` — if frozen/deprecated directories found
+- `gotchas.md` — if project-specific traps discovered
+
+### Developer review
+
+Present generated rules for review before writing:
+
+```
+## Additional Rules Generated from Codebase Analysis
+
+I identified these architectural patterns and generated corresponding rules:
+
+**architecture.md** — centralized API client pattern, feature boundary enforcement
+**gotchas.md** — 3 project-specific traps found
+
+Preview:
+[show first few lines of each file]
+
+Are these accurate? I can:
+- Accept all and proceed
+- Edit any file before committing
+- Skip specific files
+```
+
+Wait for developer confirmation. Then proceed to Step 4.
 
 ---
 
