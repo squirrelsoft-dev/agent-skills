@@ -158,49 +158,34 @@ The script outputs JSON with the status of gitleaks, semgrep, trivy, and oxlint 
 ✅ Security tools: gitleaks ✓  semgrep ✓  trivy ✓
 ```
 
-**If any tools are missing**, present a summary using `AskUserQuestion`:
+**If any tools are missing**, list only the missing ones with install instructions:
 
 ```
-⚠️  Some security tools used by the quality gate are not installed:
+⚠️  Some security tools used by the quality gate are not installed.
+The quality gate will skip these checks until they're installed.
+
+Recommended tools:
 
   gitleaks — Secret/credential detection (finds API keys, tokens, passwords)
-  semgrep  — SAST scanner (injection, XSS, OWASP Top 10)
-  trivy    — Vulnerability scanner (dependencies, containers, IaC)
+    https://github.com/gitleaks/gitleaks#installing
+    brew install gitleaks
 
-The quality gate will skip these checks until they're installed.
-```
+  semgrep — SAST scanner (injection, XSS, OWASP Top 10)
+    https://semgrep.dev/docs/getting-started/
+    pip install semgrep  /  brew install semgrep
 
-Offer three choices:
-- **yes** — install all missing tools automatically
-- **no** — skip, continue without them
-- **list** — show platform-appropriate install commands
+  trivy — Vulnerability scanner (dependencies, containers, IaC)
+    https://trivy.dev/latest/getting-started/installation/
+    brew install trivy
 
-### If "yes":
+  oxlint — Fast linter for JavaScript/TypeScript (Node stacks only)
+    https://oxc.rs/docs/guide/usage/linter
+    npm install -g oxlint
 
-Save the check output to a temp file and run the installer:
-
-```bash
-STACK="[confirmed stack]" \
-bash "${CLAUDE_SKILL_DIR}/scripts/check-security-tools.sh" > /tmp/gf-tools.json
-STACK="[confirmed stack]" \
-TOOLS_JSON="/tmp/gf-tools.json" \
-bash "${CLAUDE_SKILL_DIR}/scripts/install-security-tools.sh"
-```
-
-Report which tools installed successfully and which failed. For failures, show the manual install command.
-
-### If "no":
-
-```
-Noted. The quality gate will skip missing tools gracefully.
-Install them anytime and restart Claude Code — the gate will pick them up.
+Install them anytime — the quality gate will pick them up automatically.
 ```
 
 Continue to Step 5.
-
-### If "list":
-
-Print manual install commands based on the detected platform from the JSON output (e.g. brew, apt-get, pip). Continue to Step 5.
 
 ---
 

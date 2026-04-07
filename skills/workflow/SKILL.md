@@ -120,13 +120,25 @@ Replace `[val]` with actual values. This writes to `.claude/skill-config.json` s
 bash scripts/detect-tools.sh
 ```
 
-For any missing tools, present a brief recommendation:
+For any missing tools, list what they do and how to install them. Do NOT offer to install them automatically.
 
-- **gitleaks** — scans for accidentally committed secrets. `brew install gitleaks`
-- **semgrep** — SAST security scanner, catches injection and OWASP issues. `pip install semgrep`
-- **gh CLI** — required for /triage, /pr, /squash-pr, /address-pr-comments. `brew install gh`
+```
+Recommended tools:
 
-Ask: "Should I install any missing tools now, or skip? (all / none / list specific ones)"
+  gitleaks — Scans for accidentally committed secrets
+    https://github.com/gitleaks/gitleaks#installing
+    brew install gitleaks
+
+  semgrep — SAST security scanner (injection, OWASP Top 10)
+    https://semgrep.dev/docs/getting-started/
+    pip install semgrep  /  brew install semgrep
+
+  gh CLI — Required for /triage, /pr, /squash-pr, /address-pr-comments
+    https://cli.github.com/
+    brew install gh
+
+The quality gate will skip checks for tools that aren't installed.
+```
 
 ---
 

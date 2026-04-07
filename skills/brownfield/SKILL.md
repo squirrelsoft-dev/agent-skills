@@ -109,7 +109,22 @@ command -v semgrep  &>/dev/null && echo "semgrep: installed"  || echo "semgrep: 
 command -v gh       &>/dev/null && echo "gh CLI: installed"   || echo "gh CLI: missing"
 ```
 
-For any missing tools, note what they do and recommend installing before `/workflow`.
+For any missing tools, list what they do and how to install them:
+
+```
+Recommended tools (install before running /workflow):
+
+  gitleaks — Secret/credential detection
+    https://github.com/gitleaks/gitleaks#installing
+
+  semgrep — SAST security scanner
+    https://semgrep.dev/docs/getting-started/
+
+  gh CLI — Required for /triage, /pr, /squash-pr, /address-pr-comments
+    https://cli.github.com/
+```
+
+Do NOT offer to install these tools automatically.
 
 ### Check for Previous Configuration
 

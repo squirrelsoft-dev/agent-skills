@@ -140,13 +140,13 @@ Wait for response before proceeding.
 bash scripts/detect-tools.sh
 ```
 
-For any missing tools, present a brief recommendation:
+For any missing tools, list what they do and how to install them. Do NOT offer to install them automatically.
 
-- **gitleaks** — scans for accidentally committed secrets. `brew install gitleaks`
-- **semgrep** — SAST security scanner, catches injection and OWASP issues. `pip install semgrep`
-- **gh CLI** — required for /triage, /pr, /squash-pr, /address-pr-comments. `brew install gh`
+- **gitleaks** — scans for accidentally committed secrets. https://github.com/gitleaks/gitleaks#installing
+- **semgrep** — SAST security scanner, catches injection and OWASP issues. https://semgrep.dev/docs/getting-started/
+- **gh CLI** — required for /triage, /pr, /squash-pr, /address-pr-comments. https://cli.github.com/
 
-Ask: "Should I install any missing tools now, or skip? (all / none / list specific ones)"
+The quality gate will skip checks for tools that aren't installed.
 
 ---
 
