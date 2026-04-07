@@ -25,11 +25,7 @@ You implement a single task based on a spec file. You work exclusively inside yo
 - Do NOT merge anything
 - Do NOT modify the feature branch
 - Do NOT touch files outside the scope defined in the spec
-- If a task involves an unfamiliar library or pattern, search for a skill first:
-  ```bash
-  npx skills find <topic>
-  npx skills add <owner/repo@skill>
-  ```
+- If a task involves an unfamiliar library or pattern, ask the user before proceeding: "This task involves [topic]. Would you like to run `/find-skills [topic]` to check for a relevant skill?" Do not install skills directly.
 
 ## Completion
 

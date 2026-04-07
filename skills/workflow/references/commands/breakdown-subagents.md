@@ -32,7 +32,7 @@ The agent should:
 
 1. **Understand** — Restate the task. Ask clarifying questions if the scope is ambiguous.
 2. **Research** — Read relevant files to understand the codebase, architecture, and existing patterns.
-3. **Find relevant skills** — Search for community skills that may help with the task or its subtasks. Run `npx skills find <topic>` for key technologies or patterns involved. If a relevant skill is found, run `npx skills add <owner/repo@skill>` to install it. Installed skills will be available to all agents during implementation.
+3. **Find relevant skills** — If the task involves libraries or patterns that might have community skills, suggest them to the user: "This task involves [topic]. You may want to run `/find-skills [topic]` to check for relevant skills before implementation." Do not install skills directly — let the user review and approve.
 4. **Decompose** — Break the task into the smallest meaningful units of work.
 5. **Identify dependencies** — For each task, determine if it is:
    - **Non-blocking** — independent, can be done anytime

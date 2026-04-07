@@ -87,7 +87,7 @@ Files owned: <files owned list>
 For each task in your domain:
 
 1. Read the files listed in the task to understand existing code
-2. Search for relevant community skills by running `npx skills find <topic>`. If useful, run `npx skills add <owner/repo@skill>` and note it in the spec.
+2. If the task involves an unfamiliar library or pattern, note it in the spec and suggest the user run `/find-skills <topic>` to check for relevant community skills before implementation.
 3. Write a spec file to `.claude/specs/$ARGUMENTS/<task-title-kebab>.md` using the format below
 
 After writing all specs, mark your task as completed via TaskUpdate and send a message to the orchestrator confirming completion.

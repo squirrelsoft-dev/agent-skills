@@ -1,5 +1,5 @@
 ---
-description: 'Find and install skills for your project dependencies. Reads installed skills and dependency files, identifies gaps, searches the registry, and offers to install matches.'
+description: 'Find and install skills for your project dependencies. Reads installed skills and dependency files, identifies gaps, and guides the user through discovery and installation.'
 ---
 
 # Update Skills
@@ -45,58 +45,34 @@ require exact name matching — reason about what each skill covers.
 If all packages are already covered, report this and stop:
 > "All your key dependencies are covered by installed skills. Nothing to add."
 
-## Step 4 — Search the registry
+## Step 4 — Present findings and suggest discovery
 
-For each uncovered package, run:
-
-```bash
-npx skills find <package-name>
-```
-
-Use parallel subagents to run searches concurrently — a project might have 10-15
-uncovered packages worth searching. Collect and deduplicate results across all
-searches (the same skill might match multiple packages).
-
-## Step 5 — Present findings
-
-Show three groups:
+Show the analysis:
 
 ```
-📦 Skills found for your dependencies:
+📦 Dependencies not covered by any installed skill:
 
-  prisma        → prisma-best-practices     "Prisma ORM patterns, migrations, and query optimization"
-  playwright    → playwright-testing        "E2E testing patterns and best practices with Playwright"
-  tailwindcss   → tailwind-ui-patterns      "Tailwind CSS component patterns and design system usage"
+  prisma, playwright, tailwindcss, zustand, zod
 
 ✅ Already covered by installed skills:
   react, next → next-patterns
   vitest → testing-patterns
 
-🔍 No skills found for:
-  zustand, zod, lucide-react
-  (These packages don't have skills in the registry yet — see https://skills.sh)
+To search for skills for these dependencies, run:
+  /find-skills prisma
+  /find-skills playwright
+  /find-skills tailwindcss
 
-Install the N found skills? (all / select / none)
+Or search for all at once:
+  /find-skills prisma playwright tailwindcss zustand zod
 ```
 
-If no skills were found for any uncovered package, report this clearly and mention
-https://skills.sh as a place to discover or contribute skills. Do not make the
-"nothing found" cases feel like failures — the registry is growing.
-
-## Step 6 — Install selected skills
-
-For each approved skill:
-
-```bash
-npx skills add <skill-name>
-```
-
-After installation:
-> "⚠️ Restart Claude Code to load the new skills into context."
+If no uncovered packages are found, report this clearly. Do not install skills
+directly — present the gaps and let the user decide which to search for.
 
 ## Edge cases
 
 - **npx not available** — print a clear error and stop.
 - **No dependency file found** — report which files were checked and stop.
-- **All packages already covered** — brief confirmation in Step 3, skip Steps 4-6.
-- **No skills found for any uncovered package** — report clearly in Step 5, skip Step 6.
+- **All packages already covered** — brief confirmation in Step 3, stop.
+- **No uncovered packages** — report clearly, skip Step 4.

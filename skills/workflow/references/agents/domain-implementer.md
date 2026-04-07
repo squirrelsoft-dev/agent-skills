@@ -27,11 +27,7 @@ Wait for group assignment messages from the orchestrator. For each `GROUP_ASSIGN
 2. For each task in the group:
    a. Read the spec file
    b. Read existing code in the listed files to understand current state
-   c. If the task involves an unfamiliar library or pattern, search for a skill first:
-      ```bash
-      npx skills find <topic>
-      npx skills add <owner/repo@skill>
-      ```
+   c. If the task involves an unfamiliar library or pattern, ask the user before proceeding: "This task involves [topic]. Would you like to run `/find-skills [topic]` to check for a relevant skill?" Do not install skills directly.
    d. Implement the changes described in the spec
 3. After all tasks in the group are complete, send a single message to the orchestrator:
    ```
