@@ -63,8 +63,8 @@ setup() {
   assert_file_exists "$SKILL_DIR/references/triage-skill.md"
 }
 
-@test "package: total file count is 27" {
+@test "package: total file count is 29" {
   local count
   count=$(find "$SKILL_DIR" -type f -not -path "*/tests/*" 2>/dev/null | wc -l)
-  [ "$count" -eq 27 ]
+  [ "$count" -eq 29 ]
 }
