@@ -105,32 +105,43 @@ If `.claude/commands/` or `.claude/agents/` already have files, warn:
 
 ## Step 2 — Interview
 
-Present all questions at once before doing anything:
+Ask each question using `AskUserQuestion` and wait for the response before proceeding to the next question.
+
+### Question 1 — Orchestration Mode
+
+Use `AskUserQuestion` with this prompt:
 
 ```
-Setting up your development workflow. A few questions:
+Setting up your development workflow.
 
-1. Orchestration mode — How should /breakdown, /spec, and /work orchestrate agents?
+Orchestration mode — How should /breakdown, /spec, and /work orchestrate agents?
 
-   a) Subagents (recommended) — parallel workers in isolated git worktrees,
-      merged by the git-expert agent. Stable, works everywhere.
+  a) Subagents (recommended) — parallel workers in isolated git worktrees,
+     merged by the git-expert agent. Stable, works everywhere.
 
-   b) Agent teams — persistent domain teammates receive work one group at a
-      time on a shared branch, with a Quality Gate agent running all 8 gates
-      between groups. Requires CC v2.1.32+ and
-      CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS enabled.
-
-2. Which commands would you like installed? (default: all)
-   a) /breakdown, /spec, /work  — feature planning and implementation   ✓
-   b) /commit                   — conventional commit message generator  ✓
-   c) /review                   — code review of current changes         ✓
-   d) /pr, /squash-pr, /address-pr-comments — pull request workflow      ✓
-   e) /fix-issue                — implement a GitHub issue end-to-end    ✓
-   f) /security-scan            — on-demand deep security scan           ✓
-   g) /triage                   — GitHub issue analysis (requires gh)    ✓
+  b) Agent teams — persistent domain teammates receive work one group at a
+     time on a shared branch, with a Quality Gate agent running all 8 gates
+     between groups. Requires CC v2.1.32+ and
+     CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS enabled.
 ```
 
-Wait for response before proceeding.
+### Question 2 — Commands
+
+Use `AskUserQuestion` with this prompt:
+
+```
+Which commands would you like installed? (default: all)
+
+  a) /breakdown, /spec, /work  — feature planning and implementation   ✓
+  b) /commit                   — conventional commit message generator  ✓
+  c) /review                   — code review of current changes         ✓
+  d) /pr, /squash-pr, /address-pr-comments — pull request workflow      ✓
+  e) /fix-issue                — implement a GitHub issue end-to-end    ✓
+  f) /security-scan            — on-demand deep security scan           ✓
+  g) /triage                   — GitHub issue analysis (requires gh)    ✓
+
+Enter "all" or list letters to include (e.g. "a, b, d"):
+```
 
 ---
 
