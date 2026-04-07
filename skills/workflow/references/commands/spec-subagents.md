@@ -11,7 +11,7 @@ Generate detailed specification files from a task breakdown.
 ## Workflow
 
 1. Read the task list file from `.claude/tasks/$ARGUMENTS.md`. If it doesn't exist, tell the user and suggest running `/breakdown $ARGUMENTS` first.
-2. Check the file format — if the file contains `## Domain:` headers instead of `## Group N —` headers, tell the user: "This task file uses domain format. Use `/spec-team $ARGUMENTS` instead." and stop.
+2. Check the file format — if the file contains `## Domain:` headers instead of `## Group N —` headers, tell the user: "This task file uses domain format. Use `/spec $ARGUMENTS` instead." and stop.
 3. Parse all tasks — items matching the pattern `- [ ] **Task title**`.
 4. Create the output directory `.claude/specs/$ARGUMENTS/`.
 5. For each task, spawn a subagent using the `Agent` tool in parallel. Use `run_in_background: true` so all agents run concurrently. Do **not** use `isolation: "worktree"` — spec agents only read code and write to `.claude/specs/`, so they won't conflict.

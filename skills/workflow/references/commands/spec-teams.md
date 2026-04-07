@@ -12,7 +12,7 @@ Generate detailed specification files from a domain-based task breakdown using a
 
 ### 1. Read and validate
 
-Read the task list file from `.claude/tasks/$ARGUMENTS.md`. If it doesn't exist, tell the user and suggest running `/breakdown-team $ARGUMENTS` first.
+Read the task list file from `.claude/tasks/$ARGUMENTS.md`. If it doesn't exist, tell the user and suggest running `/breakdown $ARGUMENTS` first.
 
 Verify the file uses **domain format** — it should contain `## Domain:` headers. If it contains `## Group N —` headers instead, tell the user: "This task file uses group format. Use `/spec` instead." and stop.
 

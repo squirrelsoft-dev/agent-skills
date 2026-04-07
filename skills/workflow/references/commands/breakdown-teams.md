@@ -12,7 +12,7 @@ Spawn a general-purpose agent to break down the following task: `$ARGUMENTS`
 
 Parse `$ARGUMENTS` to determine the mode:
 
-- **GitHub Issue mode**: If `--issue` flag is present (e.g., `/breakdown-team 7 --issue` or `/breakdown-team #42 --issue`), extract the issue number and fetch the full issue context from GitHub before breaking it down.
+- **GitHub Issue mode**: If `--issue` flag is present (e.g., `/breakdown 7 --issue` or `/breakdown #42 --issue`), extract the issue number and fetch the full issue context from GitHub before breaking it down.
 - **Freeform mode** (default): If no `--issue` flag, treat the arguments as a plain task description.
 
 ## GitHub Issue Mode

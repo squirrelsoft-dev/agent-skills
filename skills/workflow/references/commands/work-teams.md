@@ -6,7 +6,7 @@ description: 'Implement a domain-based task breakdown using a coordinated agent 
 
 Orchestrate implementation of a domain-based task breakdown by spawning a team of domain-implementer agents. Each agent owns a non-overlapping slice of the codebase and works through its tasks sequentially. All agents run in parallel on a single feature branch. After all agents finish: verification → quality gates → build/test → single commit.
 
-**Input:** `$ARGUMENTS` — task list name (e.g., `work-team my-feature`)
+**Input:** `$ARGUMENTS` — task list name (e.g., `work my-feature`)
 
 ---
 
@@ -27,7 +27,7 @@ Parse the file to extract:
 
 Check that `.claude/specs/$ARGUMENTS/` contains a spec file for every incomplete task (`- [ ]`). For each incomplete task, look for `.claude/specs/$ARGUMENTS/<task-title-kebab>.md`.
 
-If any specs are missing, list them and suggest running `/spec-team $ARGUMENTS` first. Stop.
+If any specs are missing, list them and suggest running `/spec $ARGUMENTS` first. Stop.
 
 ### 3. Setup
 

@@ -25,7 +25,7 @@ Read `.claude/tasks/<taskListName>.md`. If it doesn't exist, tell the user and s
 
 ### 2. Check file format
 
-If the file contains `## Domain:` headers instead of `## Group N —` headers, tell the user: "This task file uses domain format. Use `/work-team $ARGUMENTS` instead." and stop.
+If the file contains `## Domain:` headers instead of `## Group N —` headers, tell the user: "This task file uses domain format. Use `/work $ARGUMENTS` instead." and stop.
 
 ### 3. Parse the task list
 
