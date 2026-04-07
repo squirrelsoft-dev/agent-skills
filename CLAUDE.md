@@ -45,13 +45,14 @@ Detailed specs for each skill live in `docs/`. These are the source of truth —
 
 ## Testing
 
-Greenfield skill tests use [bats-core](https://github.com/bats-core/bats-core) (auto-installed on first run). Run all tests:
+Tests live in the root `tests/` directory (not inside `skills/`) to avoid shipping test files to end users via the skills installer. Tests use [bats-core](https://github.com/bats-core/bats-core) (auto-installed on first run).
 
 ```bash
-bash skills/greenfield/tests/run-tests.sh
+bash tests/greenfield/run-tests.sh
+bash tests/workflow/run-tests.sh
 ```
 
-Tests are split into `unit/` (one `.bats` file per script) and `e2e/` (full pipeline per scenario: nextjs, python, empty, existing-claude). Each test runs in a fresh `mktemp -d` directory. Fixtures live in `tests/fixtures/`.
+Tests are split into `unit/` (one `.bats` file per script) and `e2e/` (full pipeline per scenario). Each test runs in a fresh `mktemp -d` directory. Fixtures live in `tests/<skill>/fixtures/`. Shared assertions are in `tests/helpers/`.
 
 ## Conventions
 

@@ -44,13 +44,14 @@ The **workflow** skill adds slash commands (`/breakdown`, `/spec`, `/work`, etc.
 
 ## Testing
 
-Run the greenfield skill tests (uses [bats-core](https://github.com/bats-core/bats-core), auto-installed on first run):
+Tests use [bats-core](https://github.com/bats-core/bats-core) (auto-installed on first run):
 
 ```bash
-bash skills/greenfield/tests/run-tests.sh
+bash tests/greenfield/run-tests.sh
+bash tests/workflow/run-tests.sh
 ```
 
-Tests cover stack detection, artifact generation, hook behavior, and full end-to-end scenarios for Next.js, Python, empty projects, and projects with existing `.claude/` directories.
+Tests cover stack detection, artifact generation, hook behavior, and full end-to-end scenarios.
 
 ## Documentation
 

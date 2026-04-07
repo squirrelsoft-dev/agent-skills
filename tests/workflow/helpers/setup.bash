@@ -2,7 +2,8 @@
 # Shared setup/teardown for all bats tests
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCRIPTS_DIR="$(cd "$TESTS_DIR/../scripts" && pwd)"
+REPO_ROOT="$(cd "$TESTS_DIR/../.." && pwd)"
+SCRIPTS_DIR="$REPO_ROOT/skills/workflow/scripts"
 FIXTURES_DIR="$TESTS_DIR/fixtures"
 
 common_setup() {
