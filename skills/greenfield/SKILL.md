@@ -60,7 +60,41 @@ Update the detection values based on their answer.
 
 ---
 
-## Step 2 — Developer Interview
+## Step 2 — Check for Previous Configuration
+
+Before starting the interview, check if this skill has been run before:
+
+```bash
+SKILL_NAME="greenfield" \
+bash "${CLAUDE_SKILL_DIR}/scripts/load-config.sh"
+```
+
+If the output is a non-empty JSON object (not `{}`), previous answers exist. Present them:
+
+```
+Previous greenfield configuration found:
+
+  Project:       [PROJECT_NAME] — [PROJECT_DESCRIPTION]
+  Stack:         [STACK]
+  Agent teams:   [AGENT_TEAMS]
+  Commit style:  [COMMIT_STYLE]
+  CI/CD:         [CI_CD]
+
+Would you like to:
+  a) Update — regenerate all artifacts using these settings
+  b) Reconfigure — start the interview from scratch
+```
+
+Use `AskUserQuestion` and wait for the response.
+
+- If **Update**: load all saved values into environment variables and **skip to Step 3**.
+- If **Reconfigure**: proceed to the full interview below.
+
+If no previous config exists, proceed directly to the interview.
+
+---
+
+## Step 2b — Developer Interview
 
 Load the question set from:
 `${CLAUDE_SKILL_DIR}/references/interview.md`
@@ -73,7 +107,21 @@ For each question:
 3. Store the answer in the corresponding environment variable
 4. Move to the next question
 
-Ask all 7 questions (Q1–Q7) in order. Skip Q7's follow-up if the developer answers "no" to CI/CD. **Do not proceed to Step 3 until all questions are answered.**
+Ask all 7 questions (Q1–Q7) in order. Skip Q7's follow-up if the developer answers "no" to CI/CD. **Do not proceed to Step 2c until all questions are answered.**
+
+---
+
+## Step 2c — Save Configuration
+
+After the interview (or after loading previous config for an update), save the current answers:
+
+```bash
+SKILL_NAME="greenfield" \
+CONFIG_JSON='{"PROJECT_NAME":"[val]","PROJECT_DESCRIPTION":"[val]","STACK":"[val]","FRAMEWORK":"[val]","LANG":"[val]","PKG_MANAGER":"[val]","FORMATTER":"[val]","TEST_RUNNER":"[val]","HAS_TYPESCRIPT":"[val]","GIT_SETUP":"[val]","AGENT_TEAMS":"[val]","COMMIT_STYLE":"[val]","CI_CD":"[val]","CI_WORKFLOWS":"[val]"}' \
+bash "${CLAUDE_SKILL_DIR}/scripts/save-config.sh"
+```
+
+Replace `[val]` with actual values. This writes to `.claude/skill-config.json` so future runs can reuse these answers.
 
 ---
 

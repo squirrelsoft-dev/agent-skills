@@ -111,7 +111,36 @@ command -v gh       &>/dev/null && echo "gh CLI: installed"   || echo "gh CLI: m
 
 For any missing tools, note what they do and recommend installing before `/workflow`.
 
-Then ask these questions in the same message:
+### Check for Previous Configuration
+
+Before asking interview questions, check if this skill has been run before:
+
+```bash
+SKILL_NAME="brownfield" \
+bash "${CLAUDE_SKILL_DIR}/scripts/load-config.sh"
+```
+
+If the output is a non-empty JSON object (not `{}`), previous answers exist. Present the analysis summary above **and** the saved answers:
+
+```
+Previous brownfield configuration found:
+
+  Agent teams:   [AGENT_TEAMS]
+  Commit style:  [COMMIT_STYLE]
+  CI/CD:         [CI_CD]
+  Corrections:   [CORRECTIONS or "none"]
+
+Would you like to:
+  a) Update — use these settings with the fresh analysis above and regenerate artifacts
+  b) Reconfigure — answer all questions from scratch
+```
+
+Use `AskUserQuestion` and wait for the response.
+
+- If **Update**: load saved values into environment variables. If the fresh analysis reveals new conflicts or ambiguities not covered by saved corrections, ask only about those. Then **skip to Step 3b**.
+- If **Reconfigure**: proceed to the full interview below.
+
+If no previous config exists, ask all questions:
 
 1. Does this match your understanding? Correct anything that's wrong.
 2. For any conflicts listed above — which convention is the current standard?
@@ -119,7 +148,21 @@ Then ask these questions in the same message:
 4. Commit style going forward? — detected style / conventional commits / free-form
 5. Scaffold GitHub Actions CI if none detected? — yes / no
 
-**Wait for developer response before proceeding to Step 3b.**
+**Wait for developer response before proceeding.**
+
+### Save Configuration
+
+After the interview (or after loading previous config for an update), save the current answers:
+
+```bash
+SKILL_NAME="brownfield" \
+CONFIG_JSON='{"AGENT_TEAMS":"[val]","COMMIT_STYLE":"[val]","CI_CD":"[val]","CORRECTIONS":"[val]"}' \
+bash "${CLAUDE_SKILL_DIR}/scripts/save-config.sh"
+```
+
+Replace `[val]` with actual values. `CORRECTIONS` should be a JSON-escaped string of any corrections the developer made to the analysis. This writes to `.claude/skill-config.json` so future runs can reuse these answers.
+
+**Proceed to Step 3b.**
 
 ---
 

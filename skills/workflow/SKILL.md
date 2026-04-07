@@ -36,7 +36,40 @@ If `.claude/commands/` or `.claude/agents/` already have files, warn:
 
 ---
 
-## Step 2 — Interview
+## Step 2 — Check for Previous Configuration
+
+Before starting the interview, check if this skill has been run before:
+
+```bash
+SKILL_NAME="workflow" \
+bash "${CLAUDE_SKILL_DIR}/scripts/load-config.sh"
+```
+
+If the output is a non-empty JSON object (not `{}`), previous answers exist. Present them:
+
+```
+Previous workflow configuration found:
+
+  Orchestration: [ORCHESTRATION]
+  Commands:      [COMMANDS]
+  Gitleaks:      [GITLEAKS]
+  Semgrep:       [SEMGREP]
+
+Would you like to:
+  a) Update — reinstall all commands and agents using these settings
+  b) Reconfigure — start the interview from scratch
+```
+
+Use `AskUserQuestion` and wait for the response.
+
+- If **Update**: load all saved values into environment variables and **skip to Step 3**.
+- If **Reconfigure**: proceed to the full interview below.
+
+If no previous config exists, proceed directly to the interview.
+
+---
+
+## Step 2b — Interview
 
 Present all questions at once before doing anything:
 
@@ -64,6 +97,20 @@ Setting up your development workflow. A few questions:
 ```
 
 Wait for response before proceeding.
+
+---
+
+## Step 2c — Save Configuration
+
+After the interview (or after loading previous config for an update), save the current answers:
+
+```bash
+SKILL_NAME="workflow" \
+CONFIG_JSON='{"ORCHESTRATION":"[val]","COMMANDS":"[val]","GITLEAKS":"[val]","SEMGREP":"[val]"}' \
+bash "${CLAUDE_SKILL_DIR}/scripts/save-config.sh"
+```
+
+Replace `[val]` with actual values. This writes to `.claude/skill-config.json` so future runs can reuse these answers.
 
 ---
 
