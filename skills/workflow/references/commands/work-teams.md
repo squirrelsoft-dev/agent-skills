@@ -1,12 +1,15 @@
 ---
-description: 'Implement a domain-based task breakdown using a coordinated agent team'
+description: 'Implement a group-based task breakdown using a coordinated agent team'
 ---
 
 # Work (Team)
 
-Orchestrate implementation of a domain-based task breakdown by spawning a team of domain-implementer agents. Each agent owns a non-overlapping slice of the codebase and works through its tasks sequentially. All agents run in parallel on a single feature branch. After all agents finish: verification → quality gates → build/test → single commit.
+Orchestrate implementation of a group-based task breakdown by spawning a team of domain-implementer agents. Each agent owns a non-overlapping slice of the codebase. Work progresses one group at a time: teammates implement → Quality Gate agent verifies → next group. After all groups: single commit.
 
-**Input:** `$ARGUMENTS` — task list name (e.g., `work my-feature`)
+**Input:** `$ARGUMENTS` — task list name, optionally followed by `--all`
+
+- `work <task-name>` — implement the next available group only
+- `work <task-name> --all` — implement every incomplete group in dependency order
 
 ---
 
@@ -14,13 +17,18 @@ Orchestrate implementation of a domain-based task breakdown by spawning a team o
 
 ### 1. Parse and validate
 
+Split `$ARGUMENTS` on whitespace. Extract:
+- `taskListName` — first token (e.g. `issue-3`)
+- `allFlag` — true if `--all` is present
+
 Read `.claude/tasks/$ARGUMENTS.md`. If it doesn't exist, tell the user and stop.
 
-Verify the file uses **domain format** — it should contain `## Domain:` headers. If it contains `## Group N —` headers instead, tell the user: "This task file uses group format. Use `/work` instead." and stop.
+Verify the file uses **combined group+domain format** — it should contain `## Group N —` headers with `### Domain:` subsections. If it contains only `## Domain:` headers without group wrappers, tell the user: "This task file uses the old domain-only format. Please re-run `/breakdown $ARGUMENTS` to generate the updated format." and stop. If it contains `## Group N —` headers without `### Domain:` subsections, tell the user: "This task file uses group format. Use `/work` instead." and stop.
 
 Parse the file to extract:
-- Each domain's label, agent name, owned files, and prerequisite status
-- All tasks within each domain with their order, descriptions, and coordination points
+- Each group's number, label, and dependencies
+- Each domain within each group, with agent name and owned files
+- All tasks within each domain with their descriptions and coordination points
 - The Shared Files table
 
 ### 2. Verify specs exist
@@ -48,13 +56,14 @@ If any specs are missing, list them and suggest running `/spec $ARGUMENTS` first
    })
    ```
 
-3. **Create tasks** — For each incomplete task across all domains, call `TaskCreate` with:
-   - `subject`: `[<domain-label>] <task title>`
-   - `description`: Path to spec file and any dependency info
+3. **Create tasks** — For each incomplete group, call `TaskCreate` with:
+   - `subject`: `$ARGUMENTS — Group <N>: <label>`
+   - `description`: Comma-separated list of incomplete task titles in the group
 
 4. **Set up dependencies** via `TaskUpdate`:
-   - Within-domain `Depends on:` → `addBlockedBy` on the depended task
-   - If any domain is marked `[prerequisite]`, all tasks in non-prerequisite domains are blocked by ALL tasks in the prerequisite domain
+   - If a group has `_Depends on: Group N_`, add `addBlockedBy` on the depended group's task
+
+5. **Identify unique domains** — Collect all unique domain labels across all groups, along with their `Files owned:` declarations.
 
 Print the queue:
 ```
@@ -63,17 +72,23 @@ Work Team: $ARGUMENTS
 Feature branch: feat/$ARGUMENTS
 
 Domains:
-  <domain-label>  (<N> tasks)  <files owned>
-  <domain-label>  (<N> tasks)  <files owned>
+  <domain-label>  <files owned>
+  <domain-label>  <files owned>
   ...
+
+Groups:
+  [queued] Group 1 — <label>  (<N> tasks across <M> domains)
+  [queued] Group 2 — <label>  (<N> tasks across <M> domains)
+  ...
+  [complete] Group N — <label>  (skipped)
 ──────────────────────────
 ```
 
 ### 4. Spawn teammates
 
-Spawn one teammate per domain. All teammates work directly on the feature branch — no worktrees, no per-domain branches.
+Spawn one teammate per unique domain. Teammates are **persistent** — they survive across groups and receive work via `SendMessage`.
 
-For each domain:
+For each unique domain:
 
 ```
 Agent({
@@ -95,44 +110,25 @@ Agent({
 
     Do NOT touch any files outside this scope.
 
-    ## Your Tasks (in execution order)
-
-    <for each task in this domain, ordered by [order: N]:>
-    ### Task: <task title> [order: <N>]
-    Spec: .claude/specs/$ARGUMENTS/<task-title-kebab>.md
-    Coordinates with: <cross-domain refs>
-    <Depends on: <within-domain deps> if any>
-
     ## Shared Files
 
     <full Shared Files table>
 
     ## Instructions
 
-    Work through your tasks in order:
+    Wait for group assignment messages. For each GROUP_ASSIGNMENT message you receive:
+    1. Parse the tasks and spec file paths
+    2. For each task, read the spec file and implement it
+    3. When all your group tasks are done, send GROUP_COMPLETE
+    4. Wait for the next group assignment or shutdown signal
 
-    1. Call TaskList to find the next unblocked, unowned task matching your domain [<domain-label>]
-    2. Claim it via TaskUpdate(owner: "impl-<domain-label>", status: in_progress)
-    3. Read the spec file for this task
-    4. Read existing code in the listed files
-    5. If the task involves an unfamiliar library or pattern:
-       npx skills find <topic>
-       npx skills add <owner/repo@skill>
-    6. Implement the changes described in the spec
-    7. Mark task completed via TaskUpdate(status: completed)
-    8. Send progress message to orchestrator via SendMessage:
-       Domain: <domain-label>
-       Completed: <task title>
-       Remaining: <count>
-       Issues: <any problems, or "none">
-    9. Loop back to step 1
-
-    When no more tasks remain, send:
-       DOMAIN_COMPLETE
-       domain: <domain-label>
-       tasksCompleted: <count>
-       issues: <summary or "none">
-       DOMAIN_COMPLETE_END
+    For each GROUP_ASSIGNMENT, after completing all tasks, send exactly:
+      GROUP_COMPLETE
+      domain: <domain-label>
+      group: <N>
+      tasksCompleted: <count>
+      issues: <summary or "none">
+      GROUP_COMPLETE_END
 
     ## Critical Rules
 
@@ -141,127 +137,151 @@ Agent({
     - Do NOT push or run destructive git commands
     - For shared files, follow the Strategy column in the Shared Files table
     - Follow specs exactly; if ambiguous, make the conservative choice and note it
-    - Read existing code before writing new code; match surrounding style
+    - Read existing code before writing new code
+    - Do NOT send progress messages after individual tasks — only GROUP_COMPLETE
   `
 })
 ```
 
-If a prerequisite domain exists, spawn its teammate first and wait for it to complete before spawning the remaining teammates.
+### 5. Process groups
 
-### 5. Monitor progress
+For each group in dependency order:
 
-As teammates work:
-- Receive progress messages automatically
-- Print updates to the user as each task completes:
-  ```
-  [impl-<domain>] ✓ <task title>  (<N> remaining)
-  ```
-- If a teammate reports failure, ask the user via `AskUserQuestion`:
-  - `"Continue with other domains"` — let remaining teammates finish
-  - `"Stop"` — shut down all teammates and stop
+#### 5a. Assign group tasks to teammates
 
-Wait for all teammates to send `DOMAIN_COMPLETE`.
+For each domain that has tasks in this group, send a `SendMessage`:
 
-Print domain summary:
 ```
-──────────────────────────
-All domains complete.
-  impl-ui:     5/5 tasks
-  impl-api:    3/3 tasks
-  impl-data:   2/2 tasks
-──────────────────────────
+SendMessage({
+  to: "impl-<domain-label>",
+  message: `
+    GROUP_ASSIGNMENT
+    group: <N>
+    tasks:
+      - title: <task title>
+        spec: .claude/specs/$ARGUMENTS/<task-title-kebab>.md
+      - title: <task title>
+        spec: .claude/specs/$ARGUMENTS/<task-title-kebab>.md
+    GROUP_ASSIGNMENT_END
+  `
+})
 ```
 
-### 6. Verification
+Send to all relevant domains in parallel. If a domain has no tasks in this group, do not message it.
 
-Spawn a **verification agent** (general-purpose, NOT a teammate) to confirm all planned changes were implemented:
+Print:
+```
+Group <N> — <label>: assigning to <domain-list>
+```
+
+#### 5b. Wait for GROUP_COMPLETE
+
+Wait for a `GROUP_COMPLETE` message from each domain that was assigned tasks in this group. As each arrives, print:
+
+```
+[impl-<domain>] ✓ Group <N> complete (<M> tasks)
+```
+
+If a teammate reports issues in its `GROUP_COMPLETE` message, print the issues and ask the user via `AskUserQuestion`:
+- `"Continue with quality gates"` — proceed to 5c
+- `"Stop"` — shut down all teammates and stop
+
+#### 5c. Spawn Quality Gate agent
+
+Spawn a **Quality Gate agent** (general-purpose, NOT a teammate) to run all quality checks. This agent absorbs all retry context, keeping the main agent's context minimal.
 
 ```
 Agent({
   subagent_type: "general-purpose",
-  prompt: `
-    You are a verification agent. Your job is to confirm that all planned changes
-    from a task breakdown were actually implemented.
-
-    Task list: .claude/tasks/$ARGUMENTS.md
-    Specs directory: .claude/specs/$ARGUMENTS/
-
-    For each task in the task list:
-    1. Read the spec file
-    2. Check that every change described in the spec's Implementation Details
-       section is present in the actual codebase
-    3. Check that verification steps listed in the spec pass
-
-    Do NOT fix anything. Only report.
-
-    Output format:
-
-    VERIFICATION_REPORT_START
-    <for each task:>
-    - <task title>: PASS | GAPS
-      <if GAPS: list what is missing or deviates from spec>
-    overall: PASS | GAPS
-    VERIFICATION_REPORT_END
-  `
-})
-```
-
-If gaps are found, ask the user via `AskUserQuestion`:
-- `"Send teammates back to fix gaps"` — wake affected domain teammates via `SendMessage` with the specific gaps to address, wait for them to finish
-- `"Continue anyway"` — proceed to quality gates
-- `"Stop"` — shut down and stop
-
-### 7. Quality gates
-
-Run the full 4-gate QA on all uncommitted changes on the feature branch. Spawn a **Quality** agent:
-
-```
-Agent({
-  agent: "quality",
   run_in_background: false,
   prompt: `
-    branch: feat/$ARGUMENTS
-    taskTitle: $ARGUMENTS (full feature)
-    specFile: .claude/tasks/$ARGUMENTS.md
+    You are a Quality Gate agent. Run all quality gates on the uncommitted
+    changes on branch feat/$ARGUMENTS. For each gate that fails, spawn a
+    general-purpose fix agent to resolve the issues, then re-run the gate.
+    Repeat until the gate passes or you've exhausted 3 attempts per gate.
 
-    Run all four quality gates on the uncommitted changes on this branch.
-    This covers all domains' combined work.
+    Branch: feat/$ARGUMENTS
+    Group: <N> — <label>
+    Spec directory: .claude/specs/$ARGUMENTS/
+
+    ## Gates (run in order)
+
+    1. Lint: <project lint command>
+    2. Typecheck: <project typecheck command>
+    3. Build: <project build command>
+    4. Test: <project test command>
+    5. Simplify: run /simplify on the branch changes
+    6. Review: run /review on the branch changes
+    7. Security Review: run Skill({ skill: "security-review" })
+    8. Security Scan: run /security-scan on the branch changes
+
+    ## For each failing gate:
+    - Spawn a general-purpose subagent with mode: "auto"
+    - Tell it the gate name, specific errors, branch name, and instructions
+      to fix ONLY those issues
+    - The fix agent must NOT commit — leave changes uncommitted
+    - Wait for it to finish, then re-run the gate
+    - Max 3 remediation attempts per gate
+    - If still failing after 3 attempts, mark FAIL and continue to next gate
+
+    ## Output format:
+
+    QUALITY_GATE_REPORT_START
+    branch: feat/$ARGUMENTS
+    group: <N>
+    gate_lint: PASS | FAIL
+    gate_typecheck: PASS | FAIL
+    gate_build: PASS | FAIL
+    gate_test: PASS | FAIL
+    gate_simplify: PASS | FAIL
+    gate_review: PASS | FAIL
+    gate_security_review: PASS | FAIL
+    gate_security_scan: PASS | FAIL
+    overall: PASS | FAIL
+    notes: <one-line summary of any remaining issues, or "none">
+    QUALITY_GATE_REPORT_END
+
+    Output nothing after QUALITY_GATE_REPORT_END.
   `
 })
 ```
 
-Parse the `QA_REPORT_START ... QA_REPORT_END` block. Show results:
+#### 5d. Handle QA results
+
+Parse the `QUALITY_GATE_REPORT_START ... QUALITY_GATE_REPORT_END` block. Show results:
 
 ```
-QA Results — feat/$ARGUMENTS
-  Simplify        [PASS|FAIL]
-  Review          [PASS|FAIL]
-  Security Review [PASS|FAIL]
-  Security Scan   [PASS|FAIL]
+QA Results — Group <N>: <label>
+  Lint             [PASS|FAIL]
+  Typecheck        [PASS|FAIL]
+  Build            [PASS|FAIL]
+  Test             [PASS|FAIL]
+  Simplify         [PASS|FAIL]
+  Review           [PASS|FAIL]
+  Security Review  [PASS|FAIL]
+  Security Scan    [PASS|FAIL]
   Overall: [PASS|FAIL]
 ```
+
+If overall **PASS**: mark the group's task entry complete via `TaskUpdate(status: completed)`. The `TaskCompleted` hook fires (format + task-summary on clean code).
 
 If overall **FAIL**, ask via `AskUserQuestion`:
 - `"Accept and continue"` ⚠️
 - `"Stop"` 🛑
 
-### 8. Build / Lint / Test
+#### 5e. Loop
 
-Run verification commands on the feature branch:
+If `--all` flag is set, continue to the next available group. Otherwise stop after this group.
 
-```bash
-npm run build
-npm run lint
-npm run typecheck
-npm test
+Print group progress:
+```
+──────────────────────────
+✓ Group <N> — <label> complete
+  Next: Group <M> — <label>   (or "All groups complete")
+──────────────────────────
 ```
 
-Report pass/fail for each. If any fail, ask the user via `AskUserQuestion`:
-- `"Fix and re-run"` — spawn a remediation agent to fix, then re-run failed commands
-- `"Accept anyway"` ⚠️
-- `"Stop"` 🛑
-
-### 9. Commit and cleanup
+### 6. Commit and cleanup
 
 1. **Stage all changes**:
    ```bash
@@ -294,14 +314,19 @@ Report pass/fail for each. If any fail, ask the user via `AskUserQuestion`:
 
 Feature branch: feat/$ARGUMENTS
 
-Domain results:
-  ✓ impl-ui:     5/5 tasks completed
-  ✓ impl-api:    3/3 tasks completed
-  ✓ impl-data:   2/2 tasks completed
+Groups completed this session:
+  ✓ Group 1 — <label>  (QA: PASS)
+  ✓ Group 2 — <label>  (QA: PASS)
 
-Verification: PASS
-Quality gate: PASS
-Build/Lint/Test: PASS
+Previously complete (skipped):
+  ✓ Group N — <label>
+
+Still incomplete (if any):
+  ✗ Group M — <label>  (<reason>)
+
+Domains:
+  impl-ui:     <N> tasks across <M> groups
+  impl-api:    <N> tasks across <M> groups
 
 Commit: <short sha> feat: <title>
 
@@ -314,17 +339,16 @@ Next steps:
 
 ## Error handling
 
-- **Teammate failure**: warn user, offer continue-with-other-domains or stop
-- **Verification gaps**: offer send-back, continue-anyway, or stop
-- **QA failure**: offer accept or stop
-- **Build/test failure**: offer fix, accept, or stop
-- **Prerequisite domain failure**: stop all — other domains cannot proceed without prerequisite
+- **Teammate failure**: warn user, offer continue-with-quality-gates or stop
+- **Quality Gate failure**: offer accept or stop
+- **Blocked groups** (in `--all` mode): if a group's dependencies are unmet after prior groups complete, report blockage and stop
 
 ## Rules
 
 - Do NOT implement anything directly — always delegate to domain-implementer teammates
-- Do NOT commit until all verification and quality gates pass
-- Do NOT skip the verification phase — every planned change must be confirmed
-- Do NOT skip the quality gate phase
-- DO spawn all non-prerequisite domain teammates in parallel
-- DO process prerequisite domains first, before spawning other teammates
+- Do NOT commit until all quality gates pass for completed groups
+- Do NOT skip the Quality Gate phase — every group must pass through quality gates
+- Do NOT process groups in parallel — dependency order must be respected
+- DO spawn all domain teammates upfront — they persist across groups
+- DO send group assignments only to domains that have tasks in that group
+- DO keep main agent context minimal — Quality Gate agent absorbs all retry context

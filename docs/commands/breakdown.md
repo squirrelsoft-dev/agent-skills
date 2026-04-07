@@ -26,7 +26,7 @@ Two variants are installed depending on the mode chosen during `/workflow`:
 
 **Subagents** — the architect runs as a subagent in an isolated worktree, then the task list is returned to the main session.
 
-**Agent teams** — the architect coordinates with domain-implementer teammates who can begin parallel analysis of their respective domains.
+**Agent teams** — the architect produces a combined group+domain format with `## Group N —` headers containing `### Domain:` subsections, organizing tasks into sequential groups for group-based execution.
 
 ## Next step
 

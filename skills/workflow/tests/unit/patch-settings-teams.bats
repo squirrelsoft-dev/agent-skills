@@ -16,8 +16,8 @@ teardown() { common_teardown; }
 @test "patch-settings-teams: skips when already patched" {
   copy_fixture "post-greenfield"
   cd "$TEST_TEMP_DIR"
-  # Manually add TeammateIdle to simulate prior run
-  jq '.hooks.TeammateIdle = []' .claude/settings.json > .claude/settings.json.tmp \
+  # Manually add TaskCompleted to simulate prior run
+  jq '.hooks.TaskCompleted = []' .claude/settings.json > .claude/settings.json.tmp \
     && mv .claude/settings.json.tmp .claude/settings.json
   run "$SCRIPTS_DIR/patch-settings-teams.sh"
   [ "$status" -eq 0 ]
@@ -25,31 +25,30 @@ teardown() { common_teardown; }
   assert_json_stdout_field '.reason' 'already patched'
 }
 
-@test "patch-settings-teams: adds TeammateIdle and TaskCompleted hooks" {
+@test "patch-settings-teams: adds TaskCompleted hook with format and task-summary" {
   copy_fixture "post-greenfield"
   cd "$TEST_TEMP_DIR"
   run "$SCRIPTS_DIR/patch-settings-teams.sh"
   [ "$status" -eq 0 ]
-  assert_file_contains "$TEST_TEMP_DIR/.claude/settings.json" "TeammateIdle"
   assert_file_contains "$TEST_TEMP_DIR/.claude/settings.json" "TaskCompleted"
+  assert_file_contains "$TEST_TEMP_DIR/.claude/settings.json" "format.sh"
+  assert_file_contains "$TEST_TEMP_DIR/.claude/settings.json" "task-summary.sh"
 }
 
-@test "patch-settings-teams: creates teammate-quality-gate.sh" {
+@test "patch-settings-teams: does not add TeammateIdle hook" {
   copy_fixture "post-greenfield"
   cd "$TEST_TEMP_DIR"
   run "$SCRIPTS_DIR/patch-settings-teams.sh"
   [ "$status" -eq 0 ]
-  assert_file_exists "$TEST_TEMP_DIR/.claude/hooks/teammate-quality-gate.sh"
-  assert_file_executable "$TEST_TEMP_DIR/.claude/hooks/teammate-quality-gate.sh"
+  assert_file_not_contains "$TEST_TEMP_DIR/.claude/settings.json" "TeammateIdle"
 }
 
-@test "patch-settings-teams: teammate gate contains lint/test commands" {
+@test "patch-settings-teams: does not create teammate-quality-gate.sh" {
   copy_fixture "post-greenfield"
   cd "$TEST_TEMP_DIR"
   run "$SCRIPTS_DIR/patch-settings-teams.sh"
   [ "$status" -eq 0 ]
-  assert_file_contains "$TEST_TEMP_DIR/.claude/hooks/teammate-quality-gate.sh" "npm run lint"
-  assert_file_contains "$TEST_TEMP_DIR/.claude/hooks/teammate-quality-gate.sh" "npm test"
+  [ ! -f "$TEST_TEMP_DIR/.claude/hooks/teammate-quality-gate.sh" ]
 }
 
 @test "patch-settings-teams: preserves existing hooks" {

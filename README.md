@@ -6,9 +6,9 @@ Claude Code agent skills for intelligent, interview-driven project configuration
 
 | Skill | Description | Status |
 |---|---|---|
-| **greenfield** | Set up Claude Code for a brand new project from scratch | In progress |
-| **brownfield** | Analyze and configure Claude Code for an existing project | Planned |
-| **workflow** | Install development commands and agent workflows | Planned |
+| **greenfield** | Set up Claude Code for a brand new project from scratch | ✅ Available |
+| **brownfield** | Analyze and configure Claude Code for an existing project | In progress |
+| **workflow** | Install development commands and agent workflows | In progress |
 
 ## Installation
 
@@ -30,6 +30,8 @@ The **greenfield** skill runs an interactive interview, detects your stack, then
 - `.claude/rules/` — coding rules (general, security, testing, stack-specific)
 - `.claude/hooks/` — guard rails, auto-formatting, quality gates
 - `.gitignore` entries for Claude Code personal files
+
+The **workflow** skill adds slash commands (`/breakdown`, `/spec`, `/work`, etc.) and agents in two orchestration modes: **subagents** (parallel workers in isolated worktrees) or **agent teams** (persistent domain teammates with group-based execution and a dedicated Quality Gate agent).
 
 ## Supported Stacks
 
@@ -54,6 +56,7 @@ Tests cover stack detection, artifact generation, hook behavior, and full end-to
 
 - [Agent Skills Specification](https://agentskills.io)
 - [Greenfield Implementation Plan](docs/greenfield-implementation-plan.md)
+- [Workflow Implementation Plan](docs/workflow-implementation-plan.md)
 - [Full documentation index](docs/README.md)
 
 ## License

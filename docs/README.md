@@ -35,7 +35,7 @@ Hooks are shell scripts that Claude Code runs automatically at specific points d
 | [guard.sh](hooks/guard.md) | Before every tool use | Blocks destructive commands and secret exposure |
 | [format.sh](hooks/format.md) | After every file write | Auto-formats changed files |
 | [stop-quality-gate.sh](hooks/stop-quality-gate.md) | When Claude completes a task | Runs lint + tests, blocks completion on failure |
-| [task-summary.sh](hooks/task-summary.md) | When Claude completes a task | Writes a session log to `.claude/logs/` |
+| [format.sh](hooks/format.md) + [task-summary.sh](hooks/task-summary.md) | TaskCompleted (teams mode) | Auto-formats changed files and writes a session log |
 | [save-context.sh](hooks/save-context.md) | Before context compaction | Saves a WIP snapshot to `.claude/scratch/` |
 | [session-start.sh](hooks/session-start.md) | When a session starts | Shows current git state |
 
@@ -68,6 +68,17 @@ Commands are slash commands installed by the `workflow` skill.
 | [/fix-issue](commands/fix-issue.md) | Implement a GitHub issue end-to-end |
 | [/security-scan](commands/security-scan.md) | On-demand deep security scan |
 | [/triage](commands/triage.md) | Analyze and plan a GitHub issue |
+
+### Workflows
+
+Visual diagrams of the development loop pipelines.
+
+| Workflow | Description |
+|---|---|
+| [Breakdown Flow](workflows/breakdown-flow.md) | Task decomposition from feature description or GitHub issue |
+| [Spec Flow](workflows/spec-flow.md) | Parallel spec generation from task breakdown |
+| [Subagent Work Flow](workflows/subagent-flow.md) | Parallel workers in isolated worktrees, merged by git-expert |
+| [Agent Teams Work Flow](workflows/agent-teams-flow.md) | Persistent domain teammates with group-based execution |
 
 ---
 

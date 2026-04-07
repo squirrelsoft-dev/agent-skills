@@ -14,13 +14,12 @@ already has Claude Code foundation config from the greenfield or brownfield skil
 - Slash commands: `/breakdown`, `/spec`, `/work`, `/commit`, `/review`, `/pr`,
   `/squash-pr`, `/address-pr-comments`, `/security-scan`, `/triage`, `/fix-issue`
 - Agents: architect, implementer (subagents mode) or domain-implementer (teams mode),
-  quality, git-expert
+  quality-gate, git-expert
 - Nested skill: triage (installed to `.claude/skills/triage/`)
-- Optional: teammate quality gate hooks when agent teams is chosen
 
 The skill runs a short interview, detects available quality tools, installs the
 correct version of each command based on orchestration mode, and optionally
-patches settings.json for agent teams hooks.
+patches settings.json for agent teams TaskCompleted hooks (format + task-summary).
 
 ---
 
@@ -36,11 +35,11 @@ skills/
     │   ├── install-agents.sh            ← copies agent files to .claude/agents/
     │   ├── install-triage-skill.sh      ← writes .claude/skills/triage/SKILL.md
     │   ├── patch-quality-gate.sh        ← adds gitleaks/semgrep blocks to stop-quality-gate.sh
-    │   └── patch-settings-teams.sh      ← adds TeammateIdle/TaskCompleted to settings.json
+    │   └── patch-settings-teams.sh      ← adds TaskCompleted hooks (format + task-summary) to settings.json
     └── references/
         ├── commands/
         │   ├── breakdown-subagents.md   ← /breakdown for subagents mode
-        │   ├── breakdown-teams.md       ← /breakdown for agent teams mode
+        │   ├── breakdown-teams.md       ← /breakdown for agent teams mode (combined group+domain format)
         │   ├── spec-subagents.md        ← /spec for subagents mode
         │   ├── spec-teams.md            ← /spec for agent teams mode
         │   ├── work-subagents.md        ← /work for subagents mode
@@ -116,8 +115,9 @@ Setting up your development workflow. A few questions:
    a) Subagents (recommended) — parallel workers in isolated git worktrees,
       merged by the git-expert agent. Stable, works everywhere.
 
-   b) Agent teams (experimental) — teammates work on parallel domains of the
-      codebase on a shared branch. Requires CC v2.1.32+ and
+   b) Agent teams — persistent domain teammates receive work one group at a
+      time on a shared branch, with a Quality Gate agent running all 8 gates
+      between groups. Requires CC v2.1.32+ and
       CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS enabled.
 
 2. Which commands would you like installed? (default: all)
@@ -191,13 +191,14 @@ If orchestration = teams:
 bash scripts/patch-settings-teams.sh
 ```
 
-Adds `TeammateIdle` and `TaskCompleted` hooks to `.claude/settings.json`
-and creates `.claude/hooks/teammate-quality-gate.sh`.
+Adds `TaskCompleted` hooks to `.claude/settings.json` that run `format.sh` and
+`task-summary.sh`. Quality gates are not run per-task — they are handled by the
+dedicated Quality Gate agent spawned between groups.
 
 Note to developer after patching:
-> VS Code may show schema warnings on `TeammateIdle` and `TaskCompleted`.
-> This is a known schema lag — agent teams are experimental. The hooks work
-> correctly at runtime. To suppress the warning add this to `.vscode/settings.json`:
+> VS Code may show schema warnings on `TaskCompleted`.
+> This is a known schema lag — agent teams hooks work correctly at runtime.
+> To suppress the warning add this to `.vscode/settings.json`:
 > `{ "json.schemas": [{ "fileMatch": ["**/.claude/settings.json"], "schema": {} }] }`
 
 ---
@@ -228,8 +229,8 @@ Commands installed:
 
 Agents installed:
   architect                           — plans features and architecture
-  [implementer | domain-implementer]  — implements specs
-  quality                             — 4-gate quality review
+  [implementer | domain-implementer]  — implements specs [per-group in teams mode]
+  quality-gate                        — 8-gate quality review (between groups in teams mode)
   git-expert                          — worktrees, merges, verification
 
 Quality tools:
@@ -465,16 +466,16 @@ echo "{\"status\":\"ok\",\"patched\":\"$PATCHED_STR\"}"
 
 ## Step 7 — Create `skills/workflow/scripts/patch-settings-teams.sh`
 
-Adds `TeammateIdle` and `TaskCompleted` hooks to `.claude/settings.json`
-and creates the `teammate-quality-gate.sh` hook script.
+Adds `TaskCompleted` hooks to `.claude/settings.json` that run `format.sh` and
+`task-summary.sh`. No `teammate-quality-gate.sh` is created — quality gates are
+handled by the dedicated Quality Gate agent spawned between groups.
 Uses jq to safely modify JSON rather than sed.
 
 ```bash
 #!/bin/bash
 set -e
 # patch-settings-teams.sh
-# Adds agent teams hooks to .claude/settings.json
-# Creates .claude/hooks/teammate-quality-gate.sh
+# Adds TaskCompleted hooks (format + task-summary) to .claude/settings.json
 
 SETTINGS=".claude/settings.json"
 
@@ -484,7 +485,7 @@ if [ ! -f "$SETTINGS" ]; then
   exit 0
 fi
 
-if grep -q "TeammateIdle" "$SETTINGS"; then
+if grep -q "TaskCompleted" "$SETTINGS"; then
   echo "Already patched — skipping" >&2
   echo '{"status":"skipped","reason":"already patched"}'
   exit 0
@@ -492,54 +493,20 @@ fi
 
 echo "Patching settings.json for agent teams..." >&2
 
-# Extract lint/test commands from existing stop-quality-gate.sh
-LINT_CMD=$(grep -m1 'output=\$(' .claude/hooks/stop-quality-gate.sh 2>/dev/null \
-  | sed 's/.*output=\$(//;s/ 2>&1.*//' || echo "npm run lint")
-TEST_CMD=$(grep -m2 'output=\$(' .claude/hooks/stop-quality-gate.sh 2>/dev/null \
-  | tail -1 | sed 's/.*output=\$(//;s/ 2>&1.*//' || echo "npm test")
-
 if command -v jq &>/dev/null; then
-  HOOK_CMD='bash "$CLAUDE_PROJECT_DIR/.claude/hooks/teammate-quality-gate.sh"'
-  jq --arg cmd "$HOOK_CMD" '
-    .hooks.TeammateIdle = [{"hooks": [{"type": "command", "command": $cmd}]}] |
-    .hooks.TaskCompleted = [{"hooks": [{"type": "command", "command": $cmd}]}]
+  FORMAT_CMD='bash "$CLAUDE_PROJECT_DIR/.claude/hooks/format.sh"'
+  SUMMARY_CMD='bash "$CLAUDE_PROJECT_DIR/.claude/hooks/task-summary.sh"'
+  jq --arg fmt "$FORMAT_CMD" --arg sum "$SUMMARY_CMD" '
+    .hooks.TaskCompleted = [{"hooks": [
+      {"type": "command", "command": $fmt},
+      {"type": "command", "command": $sum}
+    ]}]
   ' "$SETTINGS" > "${SETTINGS}.tmp" && mv "${SETTINGS}.tmp" "$SETTINGS"
-  echo "settings.json patched" >&2
+  echo "settings.json patched with TaskCompleted hooks (format + task-summary)" >&2
 else
-  echo "WARNING: jq not found. Manually add TeammateIdle and TaskCompleted to .claude/settings.json" >&2
+  echo "WARNING: jq not found. Manually add TaskCompleted to .claude/settings.json" >&2
 fi
 
-# Create teammate-quality-gate.sh using detected commands
-LINT="${LINT_CMD:-npm run lint}"
-TEST="${TEST_CMD:-npm test}"
-
-cat > .claude/hooks/teammate-quality-gate.sh << HOOKEOF
-#!/usr/bin/env bash
-# TeammateIdle/TaskCompleted — gates teammates until quality passes
-# Exit 2 sends feedback back to THIS teammate, not the lead agent.
-set -euo pipefail
-INPUT=\$(cat)
-TEAMMATE=\$(echo "\$INPUT" | jq -r '.teammate_name // "teammate"')
-TASK=\$(echo "\$INPUT" | jq -r '.task_subject // "current task"')
-ERRORS=""
-cd "\$CLAUDE_PROJECT_DIR"
-CHANGED=\$(git diff --name-only HEAD 2>/dev/null || echo "")
-[[ -z "\$CHANGED" ]] && exit 0
-if ! output=\$(${LINT} 2>&1); then
-  ERRORS+="\\n## Lint Failed\\n\\\`\\\`\\\`\\n\${output}\\n\\\`\\\`\\\`\\n"
-fi
-if ! output=\$(${TEST} 2>&1); then
-  ERRORS+="\\n## Tests Failed\\n\\\`\\\`\\\`\\n\${output}\\n\\\`\\\`\\\`\\n"
-fi
-if [[ -n "\$ERRORS" ]]; then
-  printf "%s: fix before marking '%s' done:\\n%b" "\$TEAMMATE" "\$TASK" "\$ERRORS" >&2
-  exit 2
-fi
-exit 0
-HOOKEOF
-
-chmod +x .claude/hooks/teammate-quality-gate.sh
-echo "teammate-quality-gate.sh created" >&2
 echo '{"status":"ok"}'
 ```
 
@@ -656,5 +623,7 @@ If that comment changes in those skills, update this script too.
 
 **patch-settings-teams.sh requires `jq`** for safe JSON modification.
 If jq is unavailable, it prints a manual instruction instead of failing.
+No `teammate-quality-gate.sh` is created — quality gates run via a dedicated
+Quality Gate agent spawned between groups.
 
 **All `.sh` files must be `chmod +x` after creation.**

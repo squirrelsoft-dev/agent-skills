@@ -14,10 +14,11 @@ Generate detailed specification files from a domain-based task breakdown using a
 
 Read the task list file from `.claude/tasks/$ARGUMENTS.md`. If it doesn't exist, tell the user and suggest running `/breakdown $ARGUMENTS` first.
 
-Verify the file uses **domain format** — it should contain `## Domain:` headers. If it contains `## Group N —` headers instead, tell the user: "This task file uses group format. Use `/spec` instead." and stop.
+Verify the file uses **combined group+domain format** — it should contain `## Group N —` headers with `### Domain:` subsections. If it contains only `## Domain:` headers without group wrappers, tell the user: "This task file uses the old domain-only format. Please re-run `/breakdown $ARGUMENTS` to generate the updated format." and stop. If it contains `## Group N —` headers without `### Domain:` subsections, tell the user: "This task file uses group format without domains. Use `/spec` instead." and stop.
 
 Parse the file to extract:
-- Each domain's label, agent name, and owned files
+- Each group's number, label, and dependencies
+- Each domain within each group, with agent name and owned files
 - All tasks within each domain (items matching `- [ ] **Task title**`)
 - The Shared Files table (if present)
 

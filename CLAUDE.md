@@ -10,9 +10,9 @@ agent-skills is a collection of Claude Code agent skills that replace the determ
 
 | Skill | Purpose | Status |
 |---|---|---|
-| **greenfield** | Configure Claude Code for a brand new project | In progress |
-| **brownfield** | Analyze an existing codebase and generate Claude Code config | Planned |
-| **workflow** | Install development commands and agent workflows | Planned |
+| **greenfield** | Configure Claude Code for a brand new project | ✅ Available |
+| **brownfield** | Analyze an existing codebase and generate Claude Code config | In progress |
+| **workflow** | Install development commands and agent workflows | In progress |
 
 ## Architecture
 

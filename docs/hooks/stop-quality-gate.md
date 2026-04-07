@@ -36,4 +36,6 @@ The `stop-quality-gate.sh` file contains a `# Lint` comment that serves as an in
 
 ## Teammate variant
 
-When agent teams are enabled, a second hook `teammate-quality-gate.sh` is also created. It uses the same lint/test commands but is wired to the `TeammateIdle` and `TaskCompleted` hook events, which fire per-teammate rather than for the lead agent. Exit code 2 from this hook sends feedback to the specific teammate, not the lead.
+When agent teams are enabled, `teammate-quality-gate.sh` is **not** created. The `TeammateIdle` hook is removed entirely. The `TaskCompleted` hook runs `format.sh` (auto-format changed files) and `task-summary.sh` (write session log) only — it does not run lint or test gates.
+
+Quality gates in teams mode are handled by a dedicated **Quality Gate agent** spawned by the main agent after each group completes. The Quality Gate agent runs all 8 gates (lint, typecheck, build, test, simplify, review, security-review, security-scan) with a fix-loop per gate, absorbing all retry context to keep the main agent's context minimal.

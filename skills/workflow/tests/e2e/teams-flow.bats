@@ -58,22 +58,18 @@ teardown() { common_teardown; }
   assert_file_exists "$TEST_TEMP_DIR/.claude/skills/triage/SKILL.md"
 }
 
-@test "e2e/teams: TeammateIdle hook in settings.json" {
-  assert_file_contains "$TEST_TEMP_DIR/.claude/settings.json" "TeammateIdle"
-}
-
-@test "e2e/teams: TaskCompleted hook in settings.json" {
+@test "e2e/teams: TaskCompleted hook in settings.json with format and task-summary" {
   assert_file_contains "$TEST_TEMP_DIR/.claude/settings.json" "TaskCompleted"
+  assert_file_contains "$TEST_TEMP_DIR/.claude/settings.json" "format.sh"
+  assert_file_contains "$TEST_TEMP_DIR/.claude/settings.json" "task-summary.sh"
 }
 
-@test "e2e/teams: teammate-quality-gate.sh exists and is executable" {
-  assert_file_exists "$TEST_TEMP_DIR/.claude/hooks/teammate-quality-gate.sh"
-  assert_file_executable "$TEST_TEMP_DIR/.claude/hooks/teammate-quality-gate.sh"
+@test "e2e/teams: no TeammateIdle hook in settings.json" {
+  assert_file_not_contains "$TEST_TEMP_DIR/.claude/settings.json" "TeammateIdle"
 }
 
-@test "e2e/teams: teammate gate has lint/test commands from fixture" {
-  assert_file_contains "$TEST_TEMP_DIR/.claude/hooks/teammate-quality-gate.sh" "npm run lint"
-  assert_file_contains "$TEST_TEMP_DIR/.claude/hooks/teammate-quality-gate.sh" "npm test"
+@test "e2e/teams: no teammate-quality-gate.sh" {
+  [ ! -f "$TEST_TEMP_DIR/.claude/hooks/teammate-quality-gate.sh" ]
 }
 
 @test "e2e/teams: original greenfield hooks preserved" {

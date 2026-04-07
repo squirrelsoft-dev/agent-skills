@@ -124,12 +124,13 @@ If orchestration = teams:
 bash scripts/patch-settings-teams.sh
 ```
 
-Adds `TeammateIdle` and `TaskCompleted` hooks to `.claude/settings.json`
-and creates `.claude/hooks/teammate-quality-gate.sh`.
+Adds `TaskCompleted` hook to `.claude/settings.json` that runs `format.sh`
+and `task-summary.sh`. Quality gates are handled by the dedicated Quality Gate
+agent between groups — no `teammate-quality-gate.sh` is created.
 
 Note to developer after patching:
-> VS Code may show schema warnings on `TeammateIdle` and `TaskCompleted`.
-> This is a known schema lag — agent teams are experimental. The hooks work
+> VS Code may show schema warnings on `TaskCompleted`.
+> This is a known schema lag — agent teams hooks are newer than the schema. The hooks work
 > correctly at runtime. To suppress the warning add this to `.vscode/settings.json`:
 > `{ "json.schemas": [{ "fileMatch": ["**/.claude/settings.json"], "schema": {} }] }`
 
