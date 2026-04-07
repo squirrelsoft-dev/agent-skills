@@ -8,14 +8,11 @@ Checks for skills relevant to this project's dependencies that aren't installed 
 
 ## Step 1 — Read installed skills
 
-```bash
-npx skills list
-```
-
-Note each installed skill's name and description. Infer what packages each skill
-covers — a skill named `prisma-best-practices` covers `prisma`, a skill named
-`playwright-testing` covers `playwright`. Use judgment, not exact string matching:
-a skill called `react-patterns` likely covers both `react` and `react-dom`.
+Check `.claude/skills/` for installed skills — read each `SKILL.md` frontmatter
+to get the name and description. Infer what packages each skill covers — a skill
+named `prisma-best-practices` covers `prisma`, a skill named `playwright-testing`
+covers `playwright`. Use judgment, not exact string matching: a skill called
+`react-patterns` likely covers both `react` and `react-dom`.
 
 ## Step 2 — Read project dependencies
 
@@ -72,7 +69,6 @@ directly — present the gaps and let the user decide which to search for.
 
 ## Edge cases
 
-- **npx not available** — print a clear error and stop.
 - **No dependency file found** — report which files were checked and stop.
 - **All packages already covered** — brief confirmation in Step 3, stop.
 - **No uncovered packages** — report clearly, skip Step 4.
