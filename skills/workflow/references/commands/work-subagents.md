@@ -163,10 +163,14 @@ After each QA report, show the user:
 ```
 QA Results — <worktreeBranch> (<task title>)
 
-  Simplify        [PASS|FAIL]
-  Review          [PASS|FAIL]
-  Security Review [PASS|FAIL]
-  Security Scan   [PASS|FAIL]
+  Lint             [SKIPPED]
+  Typecheck        [SKIPPED]
+  Build            [SKIPPED]
+  Test             [SKIPPED]
+  Simplify         [PASS|FAIL]
+  Review           [PASS|FAIL]
+  Security Review  [PASS|FAIL]
+  Security Scan    [PASS|FAIL]
 
   Overall: [PASS|FAIL]
   Notes: <notes>

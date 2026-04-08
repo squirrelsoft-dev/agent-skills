@@ -188,65 +188,25 @@ If a teammate reports issues in its `GROUP_COMPLETE` message, print the issues a
 
 #### 5c. Spawn Quality Gate agent
 
-Spawn a **Quality Gate agent** (general-purpose, NOT a teammate) to run all quality checks. This agent absorbs all retry context, keeping the main agent's context minimal. Use the prompt below **verbatim** — substitute only the variable placeholders (`$ARGUMENTS`, `<N>`, `<label>`, and project commands). Do not omit or summarize any gates.
+Spawn the **Quality agent** defined at `.claude/agents/quality.md` (NOT a teammate — a foreground subagent). This agent absorbs all retry context, keeping the main agent's context minimal. Do NOT run quality gates yourself — always delegate to this agent.
 
 ```
 Agent({
-  subagent_type: "general-purpose",
+  agent: "quality",
   run_in_background: false,
   prompt: `
-    You are a Quality Gate agent. Run ALL 8 quality gates listed below on
-    the uncommitted changes on branch feat/$ARGUMENTS. You MUST run every
-    gate in order — do NOT skip, combine, or omit any gate. For each gate
-    that fails, spawn a general-purpose fix agent to resolve the issues,
-    then re-run the gate. Repeat until the gate passes or you've exhausted
-    3 attempts per gate.
-
-    Branch: feat/$ARGUMENTS
-    Group: <N> — <label>
-    Spec directory: .claude/specs/$ARGUMENTS/
-
-    ## Gates (run ALL 8 in order — skipping any gate is not allowed)
-
-    1. Lint: <project lint command>
-    2. Typecheck: <project typecheck command>
-    3. Build: <project build command>
-    4. Test: <project test command>
-    5. Simplify: call Skill({ skill: "simplify" }) — if it makes changes, the gate FAILS (changes needed means code wasn't clean)
-    6. Review: call Skill({ skill: "review" }) — FAILS if it identifies issues that need fixing
-    7. Security Review: call Skill({ skill: "security-review" }) — FAILS if it identifies vulnerabilities
-    8. Security Scan: call Skill({ skill: "security-scan" }) — FAILS if it identifies security issues
-
-    ## For each failing gate:
-    - Spawn a general-purpose subagent with mode: "auto"
-    - Tell it the gate name, specific errors, branch name, and instructions
-      to fix ONLY those issues
-    - The fix agent must NOT commit — leave changes uncommitted
-    - Wait for it to finish, then re-run the gate
-    - Max 3 remediation attempts per gate
-    - If still failing after 3 attempts, mark FAIL and continue to next gate
-
-    ## Output format:
-
-    QUALITY_GATE_REPORT_START
     branch: feat/$ARGUMENTS
-    group: <N>
-    gate_lint: PASS | FAIL
-    gate_typecheck: PASS | FAIL
-    gate_build: PASS | FAIL
-    gate_test: PASS | FAIL
-    gate_simplify: PASS | FAIL
-    gate_review: PASS | FAIL
-    gate_security_review: PASS | FAIL
-    gate_security_scan: PASS | FAIL
-    overall: PASS | FAIL
-    notes: <one-line summary of any remaining issues, or "none">
-    QUALITY_GATE_REPORT_END
-
-    Output nothing after QUALITY_GATE_REPORT_END.
+    taskTitle: Group <N> — <label>
+    specFile: .claude/specs/$ARGUMENTS/
+    lintCmd: <project lint command>
+    typecheckCmd: <project typecheck command>
+    buildCmd: <project build command>
+    testCmd: <project test command>
   `
 })
 ```
+
+The agent will return a `QUALITY_GATE_REPORT_START ... QUALITY_GATE_REPORT_END` block with results for all 8 gates.
 
 #### 5d. Handle QA results
 
@@ -350,8 +310,8 @@ Next steps:
 - Do NOT implement anything directly — always delegate to domain-implementer teammates
 - Do NOT commit until all quality gates pass for completed groups
 - Do NOT skip the Quality Gate phase — every group must pass through quality gates
-- Do NOT run quality gates yourself — ALWAYS spawn a Quality Gate agent (step 5c) to handle them. The main agent never runs lint, typecheck, build, test, or any other gate directly.
-- Do NOT shorten or paraphrase the Quality Gate agent prompt — use the template from step 5c verbatim, substituting only the variable placeholders. All 8 gates must be listed in the prompt sent to the agent.
+- Do NOT run quality gates yourself — ALWAYS spawn the Quality agent via `agent: "quality"` (step 5c). The main agent never runs lint, typecheck, build, test, simplify, review, or any other gate directly.
+- Do NOT inline a custom quality gate prompt — use `agent: "quality"` which references `.claude/agents/quality.md`. Pass only the input variables (branch, taskTitle, specFile, lintCmd, typecheckCmd, buildCmd, testCmd).
 - Do NOT process groups in parallel — dependency order must be respected
 - DO spawn all domain teammates upfront — they persist across groups
 - DO send group assignments only to domains that have tasks in that group
