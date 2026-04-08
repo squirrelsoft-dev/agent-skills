@@ -103,22 +103,16 @@ SETTINGS
 if [ "$AGENT_TEAMS" = "true" ]; then
   cat >> "$PROJECT_DIR/.claude/settings.json" <<'SETTINGS'
     ],
-    "TeammateIdle": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/teammate-quality-gate.sh\""
-          }
-        ]
-      }
-    ],
     "TaskCompleted": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/teammate-quality-gate.sh\""
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/format.sh\""
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/task-summary.sh\""
           }
         ]
       }

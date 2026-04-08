@@ -51,15 +51,15 @@ The `# Lint` comment in the generated script is a **required landmark** — the 
 
 ---
 
-## Conditional: teammate-quality-gate.sh
+## Conditional: Agent Teams TaskCompleted Hook
 
-**Event:** TeammateIdle, TaskCompleted
+**Event:** TaskCompleted
 
 Install **only** when the developer confirms `agent_teams = true` at the checkpoint.
 
-Runs the same lint + test commands as stop-quality-gate.sh but is triggered when an agent team member completes a task or goes idle.
+Runs `format.sh` and `task-summary.sh` when a teammate completes a task. Quality gates are **not** run as hooks — they are handled by a dedicated Quality Gate agent spawned between task groups.
 
-**Checkpoint display:** "Agent teams quality gate — runs lint + tests when teammates complete tasks"
+**Checkpoint display:** "Agent teams — format + log on task completion (quality gates run via dedicated agent)"
 
 ---
 
@@ -98,7 +98,7 @@ Present hook recommendations at the human review checkpoint as:
 - save-context.sh — WIP snapshot before compaction
 - session-start.sh — git state display
 [if agent_teams]
-- teammate-quality-gate.sh — quality gate for agent team members
+- TaskCompleted hook — format + task-summary (quality gates via dedicated agent)
 [if has_husky or has_lefthook]
 Note: [Husky/Lefthook] pre-commit hooks detected — Claude hooks operate independently.
 ```

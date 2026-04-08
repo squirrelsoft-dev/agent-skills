@@ -798,32 +798,6 @@ fi
 exit 0
 HOOK
 
-# --- teammate-quality-gate.sh (only if agent teams enabled) ---
-if [ "$AGENT_TEAMS" = "true" ]; then
-cat > .claude/hooks/teammate-quality-gate.sh <<HOOK
-#!/usr/bin/env bash
-set -euo pipefail
-INPUT=\$(cat)
-TEAMMATE=\$(echo "\$INPUT" | jq -r '.teammate_name // "teammate"')
-TASK=\$(echo "\$INPUT" | jq -r '.task_subject // "current task"')
-ERRORS=""
-cd "\$CLAUDE_PROJECT_DIR"
-CHANGED=\$(git diff --name-only HEAD 2>/dev/null || echo "")
-[[ -z "\$CHANGED" ]] && exit 0
-if ! output=\$(${LINT_CMD} 2>&1); then
-  ERRORS+="\n## Lint Failed\n\`\`\`\n\${output}\n\`\`\`\n"
-fi
-if ! output=\$(${TEST_CMD} 2>&1); then
-  ERRORS+="\n## Tests Failed\n\`\`\`\n\${output}\n\`\`\`\n"
-fi
-if [[ -n "\$ERRORS" ]]; then
-  printf "%s: fix before marking '%s' done:\n%b" "\$TEAMMATE" "\$TASK" "\$ERRORS" >&2
-  exit 2
-fi
-exit 0
-HOOK
-fi
-
 # --- task-summary.sh ---
 cat > .claude/hooks/task-summary.sh <<'HOOK'
 #!/usr/bin/env bash
@@ -872,7 +846,6 @@ chmod +x .claude/hooks/*.sh
 
 echo "Hook scripts written and made executable" >&2
 HOOKS="guard.sh format.sh stop-quality-gate.sh task-summary.sh save-context.sh session-start.sh"
-[ "$AGENT_TEAMS" = "true" ] && HOOKS="$HOOKS teammate-quality-gate.sh"
 echo "{\"status\":\"ok\",\"files\":\"$HOOKS\"}"
 ```
 
@@ -885,37 +858,27 @@ and `.claude/settings.local.json`. Agent teams hook entries are included
 only if `AGENT_TEAMS=true`.
 
 Copy the full content from `skills/greenfield/scripts/generate-settings.sh`
-verbatim, then add these two blocks inside `settings.json` if `AGENT_TEAMS=true`:
+verbatim, then add this block inside `settings.json` if `AGENT_TEAMS=true`:
 
 ```json
-"TeammateIdle": [
-  {
-    "hooks": [
-      {
-        "type": "command",
-        "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/teammate-quality-gate.sh\""
-      }
-    ]
-  }
-],
 "TaskCompleted": [
   {
     "hooks": [
       {
         "type": "command",
-        "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/teammate-quality-gate.sh\""
+        "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/format.sh\""
+      },
+      {
+        "type": "command",
+        "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/task-summary.sh\""
       }
     ]
   }
 ]
 ```
 
-Note: VS Code may show schema warnings on `TeammateIdle` and `TaskCompleted`.
-This is a known schema lag — the hooks work correctly at runtime. Suppress with:
-```json
-{ "json.schemas": [{ "fileMatch": ["**/.claude/settings.json"], "schema": {} }] }
-```
-in `.vscode/settings.json`.
+No `teammate-quality-gate.sh` is created — quality gates are handled by a
+dedicated Quality Gate agent spawned between task groups.
 
 ---
 

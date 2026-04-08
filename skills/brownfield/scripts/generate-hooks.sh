@@ -100,36 +100,6 @@ echo '{"decision":"approve"}'
 exit 0
 HOOK
 
-# --- teammate-quality-gate.sh (only if agent teams enabled) ---
-if [ "$AGENT_TEAMS" = "true" ]; then
-cat > .claude/hooks/teammate-quality-gate.sh <<HOOK
-#!/usr/bin/env bash
-set -euo pipefail
-INPUT=\$(cat)
-TEAMMATE=\$(echo "\$INPUT" | jq -r '.teammate_name // "teammate"')
-TASK=\$(echo "\$INPUT" | jq -r '.task_subject // "current task"')
-ERRORS=""
-cd "\$CLAUDE_PROJECT_DIR"
-UNCOMMITTED=\$(git diff --name-only HEAD 2>/dev/null || echo "")
-UNTRACKED=\$(git ls-files --others --exclude-standard 2>/dev/null || echo "")
-CHANGED="\${UNCOMMITTED}\${UNTRACKED}"
-[[ -z "\$CHANGED" ]] && echo '{"decision":"approve"}' && exit 0
-if ! output=\$(${LINT_CMD} 2>&1); then
-  ERRORS+="\n## Lint Failed\n\\\`\\\`\\\`\n\${output}\n\\\`\\\`\\\`\n"
-fi
-if ! output=\$(${TEST_CMD} 2>&1); then
-  ERRORS+="\n## Tests Failed\n\\\`\\\`\\\`\n\${output}\n\\\`\\\`\\\`\n"
-fi
-if [[ -n "\$ERRORS" ]]; then
-  REASON=\$(printf '%b' "\$ERRORS" | jq -Rs .)
-  echo "{\"decision\":\"block\",\"reason\":\$REASON}"
-  exit 0
-fi
-echo '{"decision":"approve"}'
-exit 0
-HOOK
-fi
-
 # --- task-summary.sh ---
 cat > .claude/hooks/task-summary.sh <<'HOOK'
 #!/usr/bin/env bash
@@ -178,5 +148,4 @@ chmod +x .claude/hooks/*.sh
 
 echo "Hook scripts written and made executable" >&2
 HOOKS="guard.sh format.sh stop-quality-gate.sh task-summary.sh save-context.sh session-start.sh"
-[ "$AGENT_TEAMS" = "true" ] && HOOKS="$HOOKS teammate-quality-gate.sh"
 echo "{\"status\":\"ok\",\"files\":\"$HOOKS\"}"
