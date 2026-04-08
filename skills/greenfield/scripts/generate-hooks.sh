@@ -97,7 +97,7 @@ CHANGED="${UNCOMMITTED}${UNTRACKED}${COMMITTED}"
 [[ -z "$CHANGED" ]] && echo '{"decision":"approve"}' && exit 0
 # Security — secret detection
 if command -v gitleaks &>/dev/null; then
-  if output=$(gitleaks detect --no-git --source=. --verbose 2>&1 | grep -E "Secret|Finding|leak"); then
+  if output=$(gitleaks detect --no-git --source=. --verbose 2>&1 | grep -v "no leaks found" | grep -E "Secret|Finding|leak"); then
     [[ -n "$output" ]] && ERRORS+="\n## Secrets Detected (gitleaks)\n\`\`\`\n${output}\n\`\`\`\n"
   fi
 else

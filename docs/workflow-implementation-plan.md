@@ -448,7 +448,7 @@ STACK="${STACK:-unknown}"
 PATCHED=()
 
 if [ "$GITLEAKS" = "yes" ] && ! grep -q "gitleaks" "$GATE"; then
-  BLOCK='# Secret detection (gitleaks)\nif command -v gitleaks &>/dev/null; then\n  if output=$(gitleaks detect --no-git --source=. --verbose 2>&1 | grep -E "Secret|Finding|leak"); then\n    [[ -n "$output" ]] && ERRORS+="\\n## Secrets Detected\\n\\`\\`\\`\\n${output}\\n\\`\\`\\`\\n"\n  fi\nfi'
+  BLOCK='# Secret detection (gitleaks)\nif command -v gitleaks &>/dev/null; then\n  if output=$(gitleaks detect --no-git --source=. --verbose 2>&1 | grep -v "no leaks found" | grep -E "Secret|Finding|leak"); then\n    [[ -n "$output" ]] && ERRORS+="\\n## Secrets Detected\\n\\`\\`\\`\\n${output}\\n\\`\\`\\`\\n"\n  fi\nfi'
   sed -i.bak "/# Lint/i $BLOCK" "$GATE"
   PATCHED+=("gitleaks")
   echo "Added gitleaks block" >&2
