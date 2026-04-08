@@ -188,23 +188,25 @@ If a teammate reports issues in its `GROUP_COMPLETE` message, print the issues a
 
 #### 5c. Spawn Quality Gate agent
 
-Spawn a **Quality Gate agent** (general-purpose, NOT a teammate) to run all quality checks. This agent absorbs all retry context, keeping the main agent's context minimal.
+Spawn a **Quality Gate agent** (general-purpose, NOT a teammate) to run all quality checks. This agent absorbs all retry context, keeping the main agent's context minimal. Use the prompt below **verbatim** — substitute only the variable placeholders (`$ARGUMENTS`, `<N>`, `<label>`, and project commands). Do not omit or summarize any gates.
 
 ```
 Agent({
   subagent_type: "general-purpose",
   run_in_background: false,
   prompt: `
-    You are a Quality Gate agent. Run all quality gates on the uncommitted
-    changes on branch feat/$ARGUMENTS. For each gate that fails, spawn a
-    general-purpose fix agent to resolve the issues, then re-run the gate.
-    Repeat until the gate passes or you've exhausted 3 attempts per gate.
+    You are a Quality Gate agent. Run ALL 8 quality gates listed below on
+    the uncommitted changes on branch feat/$ARGUMENTS. You MUST run every
+    gate in order — do NOT skip, combine, or omit any gate. For each gate
+    that fails, spawn a general-purpose fix agent to resolve the issues,
+    then re-run the gate. Repeat until the gate passes or you've exhausted
+    3 attempts per gate.
 
     Branch: feat/$ARGUMENTS
     Group: <N> — <label>
     Spec directory: .claude/specs/$ARGUMENTS/
 
-    ## Gates (run in order)
+    ## Gates (run ALL 8 in order — skipping any gate is not allowed)
 
     1. Lint: <project lint command>
     2. Typecheck: <project typecheck command>
@@ -263,7 +265,9 @@ QA Results — Group <N>: <label>
   Overall: [PASS|FAIL]
 ```
 
-If overall **PASS**: mark the group's task entry complete via `TaskUpdate(status: completed)`. The `TaskCompleted` hook fires (format + task-summary on clean code).
+If overall **PASS**:
+1. Mark the group's task entry complete via `TaskUpdate(status: completed)`. The `TaskCompleted` hook fires (format + task-summary on clean code).
+2. **Update the task file immediately** — Read `.claude/tasks/$ARGUMENTS.md` and flip `- [ ]` to `- [x]` for every task in this group. This ensures progress is persisted even if the session is interrupted before step 6.
 
 If overall **FAIL**, ask via `AskUserQuestion`:
 - `"Accept and continue"` ⚠️
@@ -293,19 +297,17 @@ Print group progress:
    git commit -m "feat: <task list title from the # heading>"
    ```
 
-3. **Mark tasks complete** — Read `.claude/tasks/$ARGUMENTS.md` and flip all `- [ ]` to `- [x]` for tasks that were completed.
-
-4. **Shutdown teammates**:
+3. **Shutdown teammates**:
    ```
    SendMessage({ to: "*", message: { type: "shutdown_request" } })
    ```
 
-5. **Delete the team**:
+4. **Delete the team**:
    ```
    TeamDelete()
    ```
 
-6. **Print final summary**:
+5. **Print final summary**:
 
 ```
 ══════════════════════════════════
@@ -348,6 +350,7 @@ Next steps:
 - Do NOT implement anything directly — always delegate to domain-implementer teammates
 - Do NOT commit until all quality gates pass for completed groups
 - Do NOT skip the Quality Gate phase — every group must pass through quality gates
+- Do NOT shorten or paraphrase the Quality Gate agent prompt — use the template from step 5c verbatim, substituting only the variable placeholders. All 8 gates must be listed in the prompt sent to the agent.
 - Do NOT process groups in parallel — dependency order must be respected
 - DO spawn all domain teammates upfront — they persist across groups
 - DO send group assignments only to domains that have tasks in that group
