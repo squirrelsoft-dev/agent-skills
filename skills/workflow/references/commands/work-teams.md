@@ -350,6 +350,7 @@ Next steps:
 - Do NOT implement anything directly — always delegate to domain-implementer teammates
 - Do NOT commit until all quality gates pass for completed groups
 - Do NOT skip the Quality Gate phase — every group must pass through quality gates
+- Do NOT run quality gates yourself — ALWAYS spawn a Quality Gate agent (step 5c) to handle them. The main agent never runs lint, typecheck, build, test, or any other gate directly.
 - Do NOT shorten or paraphrase the Quality Gate agent prompt — use the template from step 5c verbatim, substituting only the variable placeholders. All 8 gates must be listed in the prompt sent to the agent.
 - Do NOT process groups in parallel — dependency order must be respected
 - DO spawn all domain teammates upfront — they persist across groups
