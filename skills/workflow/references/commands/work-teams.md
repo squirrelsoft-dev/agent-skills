@@ -212,10 +212,10 @@ Agent({
     2. Typecheck: <project typecheck command>
     3. Build: <project build command>
     4. Test: <project test command>
-    5. Simplify: run /simplify on the branch changes
-    6. Review: run /review on the branch changes
-    7. Security Review: run Skill({ skill: "security-review" })
-    8. Security Scan: run /security-scan on the branch changes
+    5. Simplify: call Skill({ skill: "simplify" }) — if it makes changes, the gate FAILS (changes needed means code wasn't clean)
+    6. Review: call Skill({ skill: "review" }) — FAILS if it identifies issues that need fixing
+    7. Security Review: call Skill({ skill: "security-review" }) — FAILS if it identifies vulnerabilities
+    8. Security Scan: call Skill({ skill: "security-scan" }) — FAILS if it identifies security issues
 
     ## For each failing gate:
     - Spawn a general-purpose subagent with mode: "auto"
