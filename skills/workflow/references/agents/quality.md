@@ -20,6 +20,7 @@ You will be given:
 - `buildCmd` — project build command (optional — if provided, run Gate 3)
 - `testCmd` — project test command (optional — if provided, run Gate 4)
 - `logDir` — directory to write gate log files (optional — e.g. `.claude/quality/issue-3/group-1/`)
+- `notifyTo` — teammate name to send progress notifications to (optional — e.g. `"manager"`)
 
 ## Process
 
@@ -86,6 +87,45 @@ The remediation agent MUST commit its fixes before returning:
 git add -A
 git commit -m "fix(<gate-name>): <brief description of fix>"
 ```
+
+## Progress Notifications
+
+If `notifyTo` is provided, send progress notifications via `SendMessage` at key moments so the team has visibility into QA work. If `notifyTo` is not provided, skip all notifications.
+
+**When a gate fails and remediation is starting:**
+```
+SendMessage({
+  to: <notifyTo>,
+  message: `
+    QA_PROGRESS
+    gate: <gate name>
+    status: FAIL
+    action: spawning remediation agent (attempt <N>/3)
+    issue: <one-line summary>
+    QA_PROGRESS_END
+  `
+})
+```
+
+**When a gate passes after remediation:**
+```
+QA_PROGRESS
+gate: <gate name>
+status: PASS (after <N> remediation attempts)
+QA_PROGRESS_END
+```
+
+**When a gate cannot be fixed after 3 attempts:**
+```
+QA_PROGRESS
+gate: <gate name>
+status: FAIL (unresolved after 3 attempts)
+issue: <one-line summary>
+QA_PROGRESS_END
+```
+
+**When a gate passes on the first run (no remediation needed):**
+No notification — only report failures and recoveries to keep noise low.
 
 ## Gate Log Files
 

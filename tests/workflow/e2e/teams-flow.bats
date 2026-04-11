@@ -46,10 +46,11 @@ teardown() { common_teardown; }
   assert_file_contains "$TEST_TEMP_DIR/.claude/commands/breakdown.md" "domain ownership"
 }
 
-@test "e2e/teams: 4 agents installed correctly" {
+@test "e2e/teams: 5 agents installed correctly" {
   assert_file_exists "$TEST_TEMP_DIR/.claude/agents/architect.md"
   assert_file_exists "$TEST_TEMP_DIR/.claude/agents/quality.md"
   assert_file_exists "$TEST_TEMP_DIR/.claude/agents/git-expert.md"
+  assert_file_exists "$TEST_TEMP_DIR/.claude/agents/manager.md"
   assert_file_exists "$TEST_TEMP_DIR/.claude/agents/domain-implementer.md"
   [ ! -f "$TEST_TEMP_DIR/.claude/agents/implementer.md" ]
 }

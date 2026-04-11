@@ -4,7 +4,7 @@ description: 'Implement a group-based task breakdown using a coordinated agent t
 
 # Work (Team)
 
-Orchestrate implementation of a group-based task breakdown by spawning a Manager agent that coordinates domain-implementer teammates and a Quality Gate agent. The Manager absorbs all verbose output — the main agent only sees compact status reports and user decision prompts.
+Orchestrate implementation of a group-based task breakdown by spawning a team of agents and letting the Manager coordinate them. The main agent spawns all teammates (manager, quality, domain-implementers), sends group assignments, handles user decisions, and verifies QA logs. The Manager coordinates domain agents and Quality via messages — it never spawns agents.
 
 **Input:** `$ARGUMENTS` — task list name, optionally followed by `--all`
 
@@ -76,13 +76,16 @@ Groups:
 ──────────────────────────
 ```
 
-### 4. Spawn the Manager
+### 4. Create team and spawn all teammates
 
-Create a team and spawn the Manager as a named teammate:
+Create the team and spawn all agents:
 
 ```
 TeamCreate({ team_name: "work-$ARGUMENTS" })
+```
 
+**Spawn the Manager:**
+```
 Agent({
   team_name: "work-$ARGUMENTS",
   name: "manager",
@@ -96,8 +99,7 @@ Agent({
     domains:
       - label: <domain-label>
         filesOwned: <files owned>
-      - label: <domain-label>
-        filesOwned: <files owned>
+      ...
     sharedFiles:
       <full Shared Files table>
     lintCmd: <project lint command or empty>
@@ -105,17 +107,58 @@ Agent({
     buildCmd: <project build command or empty>
     testCmd: <project test command or empty>
 
-    Wait for START_GROUP messages. For each group, spawn
-    domain-implementer teammates, coordinate work, run Quality
-    agent. Send ASK_USER for decisions. Send MANAGER_REPORT
-    when the group is complete.
+    You coordinate via SendMessage only. Wait for START_GROUP messages.
   `
 })
 ```
 
+**Spawn the Quality agent:**
+```
+Agent({
+  team_name: "work-$ARGUMENTS",
+  name: "quality",
+  agent: "quality",
+  prompt: `
+    You are the Quality agent. Wait for RUN_GATES messages from the manager.
+    For each request, run all 8 quality gates. Send QA_PROGRESS notifications
+    to the manager when gates fail or remediation occurs. Send the final
+    QUALITY_GATE_REPORT back to the manager when complete.
+  `
+})
+```
+
+**Spawn domain-implementer teammates** — one per unique domain (persistent across all groups):
+```
+Agent({
+  team_name: "work-$ARGUMENTS",
+  name: "impl-<domain-label>",
+  agent: "domain-implementer",
+  prompt: `
+    You are a domain-implementer agent.
+    Domain: <domain-label>
+    Feature branch: feat/$ARGUMENTS
+
+    ## File Ownership
+    <files owned list>
+
+    ## Shared Files
+    <full Shared Files table>
+
+    ## Instructions
+    Wait for GROUP_ASSIGNMENT messages from the manager.
+    Implement tasks, then send GROUP_COMPLETE back to the manager.
+    Do NOT commit. Do NOT push. Do NOT run destructive git commands.
+  `
+})
+```
+
+Spawn all domain-implementers in parallel.
+
 ### 5. Process groups
 
-For each group in dependency order, send a `START_GROUP` message to the Manager:
+For each group in dependency order:
+
+#### 5a. Send START_GROUP to the Manager
 
 ```
 SendMessage({
@@ -132,12 +175,15 @@ SendMessage({
         title: <task title>
         spec: .claude/specs/$ARGUMENTS/<task-title-kebab>.md
     logDir: .claude/quality/$ARGUMENTS/group-<N>/
+    teammates: [quality, impl-ui, impl-api, ...]
     START_GROUP_END
   `
 })
 ```
 
-Then enter a **message loop** — wait for messages from the Manager and handle them:
+#### 5b. Message loop
+
+Wait for messages from the Manager and handle them:
 
 - **`ASK_USER` message**: Parse the question and options. Call `AskUserQuestion` with them. Send the user's choice back:
   ```
@@ -151,6 +197,11 @@ Then enter a **message loop** — wait for messages from the Manager and handle 
   })
   ```
   If the user chose `stop`, also stop the main loop after the Manager sends its MANAGER_REPORT.
+
+- **`QA_STATUS` message**: Display as a progress line to the user:
+  ```
+  [QA] Gate <gate>: <status> — <detail>
+  ```
 
 - **`MANAGER_REPORT` message**: Parse the report. Exit the message loop for this group.
 
@@ -207,9 +258,13 @@ After all groups are processed:
    git commit -m "feat: <task list title from the # heading>"
    ```
 
-3. **Send shutdown to the Manager**:
+3. **Shutdown all teammates**:
    ```
    SendMessage({ to: "manager", message: "shutdown" })
+   SendMessage({ to: "quality", message: "shutdown" })
+   SendMessage({ to: "impl-<domain-1>", message: "shutdown" })
+   SendMessage({ to: "impl-<domain-2>", message: "shutdown" })
+   ...
    ```
 
 4. **Delete the team**:
@@ -258,11 +313,12 @@ Next steps:
 
 ## Rules
 
-- Do NOT implement anything directly — the Manager delegates to domain-implementer teammates
-- Do NOT run quality gates directly — the Manager delegates to the Quality agent
+- Do NOT implement anything directly — delegate via the Manager to domain-implementer teammates
+- Do NOT run quality gates directly — delegate via the Manager to the Quality teammate
 - Do NOT skip QA log verification — always check that 8 gate log files exist after each group
 - Do NOT process groups in parallel — dependency order must be respected
 - Do NOT commit until all quality gates pass for completed groups
-- DO keep main agent context minimal — only ASK_USER messages and MANAGER_REPORT flow back
+- DO spawn all agents as teammates — the Manager never spawns agents
+- DO keep main agent context minimal — only QA_STATUS, ASK_USER, and MANAGER_REPORT flow back
 - DO verify QA logs independently after each MANAGER_REPORT
 - DO send group assignments only via the Manager — never directly to domain agents

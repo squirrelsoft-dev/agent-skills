@@ -4,7 +4,7 @@ description: 'Implement the next task group (or all groups) from a task breakdow
 
 # Work
 
-Orchestrate implementation of a task breakdown by spawning a Manager agent that coordinates Git Expert, Implementer, and Quality agents. The Manager absorbs all verbose output — the main agent only sees compact status reports and user decision prompts.
+Orchestrate implementation of a task breakdown by spawning a team of agents and letting the Manager coordinate them. The main agent spawns all teammates, sends group assignments, handles user decisions, and verifies QA logs. The Manager coordinates Git Expert, Implementers, and Quality via messages — it never spawns agents.
 
 **Input:** `$ARGUMENTS` — task list name, optionally followed by `--all`
 
@@ -66,13 +66,16 @@ Work All: <taskListName>
 **If single group:**
 Find the next available group. If multiple are available, use `AskUserQuestion` to let the user pick. Auto-select if only one is available. Call `TaskCreate` for that group only.
 
-### 6. Spawn the Manager
+### 6. Create team and spawn persistent teammates
 
-Create a team and spawn the Manager as a named teammate:
+Create the team and spawn agents that persist across all groups:
 
 ```
 TeamCreate({ team_name: "work-<taskListName>" })
+```
 
+**Spawn the Manager:**
+```
 Agent({
   team_name: "work-<taskListName>",
   name: "manager",
@@ -87,17 +90,64 @@ Agent({
     buildCmd: <project build command or empty>
     testCmd: <project test command or empty>
 
-    Wait for START_GROUP messages. For each group, coordinate
-    Git Expert, Implementers, and Quality agents. Send ASK_USER
-    messages when user decisions are needed. Send MANAGER_REPORT
-    when the group is complete.
+    You coordinate via SendMessage only. Wait for START_GROUP messages.
+  `
+})
+```
+
+**Spawn the Git Expert:**
+```
+Agent({
+  team_name: "work-<taskListName>",
+  name: "git-expert",
+  agent: "git-expert",
+  prompt: `
+    You are the Git Expert. Wait for operation messages (SETUP, MERGE, VERIFY)
+    from the manager. Execute each operation and send the structured response
+    back to the manager.
+  `
+})
+```
+
+**Spawn the Quality agent:**
+```
+Agent({
+  team_name: "work-<taskListName>",
+  name: "quality",
+  agent: "quality",
+  prompt: `
+    You are the Quality agent. Wait for RUN_GATES messages from the manager.
+    For each request, run all 8 quality gates. Send QA_PROGRESS notifications
+    to the manager when gates fail or remediation occurs. Send the final
+    QUALITY_GATE_REPORT back to the manager when complete.
   `
 })
 ```
 
 ### 7. Process groups
 
-For each group in dependency order, send a `START_GROUP` message to the Manager:
+For each group in dependency order:
+
+#### 7a. Spawn implementer teammates for this group
+
+For each incomplete task in the group, spawn an implementer:
+
+```
+Agent({
+  team_name: "work-<taskListName>",
+  name: "impl-<agentNumber>",
+  agent: "implementer",
+  prompt: `
+    You are an implementer agent. Wait for a TASK_ASSIGNMENT message
+    from the manager. Implement the spec, commit your changes, and
+    send IMPLEMENTATION_COMPLETE back to the manager.
+  `
+})
+```
+
+Spawn all implementers in parallel.
+
+#### 7b. Send START_GROUP to the Manager
 
 ```
 SendMessage({
@@ -107,17 +157,22 @@ SendMessage({
     groupNumber: <N>
     groupLabel: <label>
     tasks:
-      - title: <task title>
+      - agentNumber: 1
+        title: <task title>
         spec: .claude/specs/<taskListName>/<task-title-kebab>.md
-      - title: <task title>
+      - agentNumber: 2
+        title: <task title>
         spec: .claude/specs/<taskListName>/<task-title-kebab>.md
     logDir: .claude/quality/<taskListName>/group-<N>/
+    teammates: [git-expert, quality, impl-1, impl-2, ...]
     START_GROUP_END
   `
 })
 ```
 
-Then enter a **message loop** — wait for messages from the Manager and handle them:
+#### 7c. Message loop
+
+Wait for messages from the Manager and handle them:
 
 - **`ASK_USER` message**: Parse the question and options. Call `AskUserQuestion` with them. Send the user's choice back:
   ```
@@ -132,7 +187,21 @@ Then enter a **message loop** — wait for messages from the Manager and handle 
   ```
   If the user chose `stop`, also stop the main loop after the Manager sends its MANAGER_REPORT.
 
+- **`QA_STATUS` message**: Display as a progress line to the user:
+  ```
+  [QA] Gate <gate>: <status> — <detail>
+  ```
+
 - **`MANAGER_REPORT` message**: Parse the report. Exit the message loop for this group.
+
+#### 7d. Shut down group implementers
+
+After the MANAGER_REPORT is received, shut down the ephemeral implementer teammates:
+```
+SendMessage({ to: "impl-1", message: "shutdown" })
+SendMessage({ to: "impl-2", message: "shutdown" })
+...
+```
 
 ### 8. Verify QA logs
 
@@ -179,9 +248,11 @@ If `--all` flag is set and more groups remain, loop back to step 7 for the next 
 
 After all groups are processed (or the user stops):
 
-1. Send a shutdown signal to the Manager:
+1. Send a shutdown signal to all persistent teammates:
    ```
    SendMessage({ to: "manager", message: "shutdown" })
+   SendMessage({ to: "git-expert", message: "shutdown" })
+   SendMessage({ to: "quality", message: "shutdown" })
    ```
 2. Delete the team:
    ```
@@ -221,10 +292,12 @@ Next steps:
 
 ## Rules
 
-- Do NOT implement anything directly — the Manager delegates to Implementer agents
-- Do NOT merge anything directly — the Manager delegates to the Git Expert agent
-- Do NOT run quality gates directly — the Manager delegates to the Quality agent
+- Do NOT implement anything directly — delegate via the Manager to Implementer teammates
+- Do NOT merge anything directly — delegate via the Manager to the Git Expert teammate
+- Do NOT run quality gates directly — delegate via the Manager to the Quality teammate
 - Do NOT skip QA log verification — always check that 8 gate log files exist after each group
 - Do NOT process groups in parallel — dependency order must be respected
-- DO keep main agent context minimal — only ASK_USER messages and MANAGER_REPORT flow back
+- DO spawn all agents as teammates — the Manager never spawns agents
+- DO spawn implementers per group and shut them down after — they are ephemeral
+- DO keep main agent context minimal — only QA_STATUS, ASK_USER, and MANAGER_REPORT flow back
 - DO verify QA logs independently after each MANAGER_REPORT
