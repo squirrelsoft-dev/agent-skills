@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# Skip when a workflow run is active (teams/subagents manage their own QA)
+[[ -f "${CLAUDE_PROJECT_DIR:-.}/.claude/.workflow-running" ]] && exit 0
 ERRORS=""
 
 # Lint

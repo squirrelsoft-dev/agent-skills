@@ -39,7 +39,12 @@ If any specs are missing, list them and suggest running `/spec $ARGUMENTS` first
 
 ### 3. Setup
 
-1. **Create the feature branch** from current HEAD:
+1. **Disable stop hooks** — create a flag file so the stop-quality-gate hook skips during the workflow run (teams manage their own QA):
+   ```bash
+   touch .claude/.workflow-running
+   ```
+
+2. **Create the feature branch** from current HEAD:
    ```bash
    git checkout -b feat/$ARGUMENTS
    ```
@@ -48,14 +53,14 @@ If any specs are missing, list them and suggest running `/spec $ARGUMENTS` first
    git checkout feat/$ARGUMENTS
    ```
 
-2. **Create tasks** — For each incomplete group, call `TaskCreate` with:
+3. **Create tasks** — For each incomplete group, call `TaskCreate` with:
    - `subject`: `$ARGUMENTS — Group <N>: <label>`
    - `description`: Comma-separated list of incomplete task titles in the group
 
-3. **Set up dependencies** via `TaskUpdate`:
+4. **Set up dependencies** via `TaskUpdate`:
    - If a group has `_Depends on: Group N_`, add `addBlockedBy` on the depended group's task
 
-4. **Identify unique domains** — Collect all unique domain labels across all groups, along with their `Files owned:` declarations.
+5. **Identify unique domains** — Collect all unique domain labels across all groups, along with their `Files owned:` declarations.
 
 Print the queue:
 ```
@@ -76,13 +81,19 @@ Groups:
 ──────────────────────────
 ```
 
-### 4. Create team and spawn all teammates
-
-Create the team and spawn all agents:
+### 4. Create team
 
 ```
 TeamCreate({ team_name: "work-$ARGUMENTS" })
 ```
+
+### 5. Process groups
+
+For each group in dependency order:
+
+#### 5a. Spawn all agents for this group
+
+All agents are **ephemeral per group** — spawned fresh with clean context at the start of each group and shut down at the end. This prevents context bloat across groups.
 
 **Spawn the Manager:**
 ```
@@ -107,7 +118,7 @@ Agent({
     buildCmd: <project build command or empty>
     testCmd: <project test command or empty>
 
-    You coordinate via SendMessage only. Wait for START_GROUP messages.
+    You coordinate via SendMessage only. Wait for a START_GROUP message.
   `
 })
 ```
@@ -127,7 +138,7 @@ Agent({
 })
 ```
 
-**Spawn domain-implementer teammates** — one per unique domain (persistent across all groups):
+**Spawn domain-implementer teammates** — one per unique domain involved in this group:
 ```
 Agent({
   team_name: "work-$ARGUMENTS",
@@ -152,13 +163,9 @@ Agent({
 })
 ```
 
-Spawn all domain-implementers in parallel.
+Spawn all agents in parallel.
 
-### 5. Process groups
-
-For each group in dependency order:
-
-#### 5a. Send START_GROUP to the Manager
+#### 5b. Send START_GROUP to the Manager
 
 ```
 SendMessage({
@@ -181,7 +188,7 @@ SendMessage({
 })
 ```
 
-#### 5b. Message loop
+#### 5c. Message loop
 
 Wait for messages from the Manager and handle them:
 
@@ -204,6 +211,17 @@ Wait for messages from the Manager and handle them:
   ```
 
 - **`MANAGER_REPORT` message**: Parse the report. Exit the message loop for this group.
+
+#### 5d. Shut down all group agents
+
+After the MANAGER_REPORT is received, shut down all agents spawned for this group so their context is released:
+```
+SendMessage({ to: "manager", message: "shutdown" })
+SendMessage({ to: "quality", message: "shutdown" })
+SendMessage({ to: "impl-<domain-1>", message: "shutdown" })
+SendMessage({ to: "impl-<domain-2>", message: "shutdown" })
+...
+```
 
 ### 6. Verify QA logs
 
@@ -258,18 +276,14 @@ After all groups are processed:
    git commit -m "feat: <task list title from the # heading>"
    ```
 
-3. **Shutdown all teammates**:
-   ```
-   SendMessage({ to: "manager", message: "shutdown" })
-   SendMessage({ to: "quality", message: "shutdown" })
-   SendMessage({ to: "impl-<domain-1>", message: "shutdown" })
-   SendMessage({ to: "impl-<domain-2>", message: "shutdown" })
-   ...
-   ```
-
-4. **Delete the team**:
+3. **Delete the team** (agents were already shut down per-group in step 5d):
    ```
    TeamDelete({ team_name: "work-$ARGUMENTS" })
+   ```
+
+4. **Re-enable stop hooks** — remove the workflow flag file:
+   ```bash
+   rm -f .claude/.workflow-running
    ```
 
 5. **Print final summary**:
@@ -318,6 +332,7 @@ Next steps:
 - Do NOT skip QA log verification — always check that 8 gate log files exist after each group
 - Do NOT process groups in parallel — dependency order must be respected
 - Do NOT commit until all quality gates pass for completed groups
+- DO spawn all agents fresh per group and shut them down after — every agent is ephemeral to prevent context bloat
 - DO spawn all agents as teammates — the Manager never spawns agents
 - DO keep main agent context minimal — only QA_STATUS, ASK_USER, and MANAGER_REPORT flow back
 - DO verify QA logs independently after each MANAGER_REPORT

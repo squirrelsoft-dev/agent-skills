@@ -45,7 +45,14 @@ Before doing anything, check that `.claude/specs/<taskListName>/` contains a spe
 
 If any specs are missing, list them and suggest running `/spec <taskListName>` first. Stop.
 
-### 5. Enqueue groups via TaskCreate
+### 5. Disable stop hooks
+
+Create a flag file so the stop-quality-gate hook skips during the workflow run (teams manage their own QA):
+```bash
+touch .claude/.workflow-running
+```
+
+### 6. Enqueue groups via TaskCreate
 
 **If `--all` flag:**
 For each incomplete group in dependency order, call `TaskCreate` with:
@@ -66,13 +73,19 @@ Work All: <taskListName>
 **If single group:**
 Find the next available group. If multiple are available, use `AskUserQuestion` to let the user pick. Auto-select if only one is available. Call `TaskCreate` for that group only.
 
-### 6. Create team and spawn persistent teammates
-
-Create the team and spawn agents that persist across all groups:
+### 7. Create team
 
 ```
 TeamCreate({ team_name: "work-<taskListName>" })
 ```
+
+### 8. Process groups
+
+For each group in dependency order:
+
+#### 8a. Spawn all agents for this group
+
+All agents are **ephemeral per group** — spawned fresh with clean context at the start of each group and shut down at the end. This prevents context bloat across groups.
 
 **Spawn the Manager:**
 ```
@@ -90,7 +103,7 @@ Agent({
     buildCmd: <project build command or empty>
     testCmd: <project test command or empty>
 
-    You coordinate via SendMessage only. Wait for START_GROUP messages.
+    You coordinate via SendMessage only. Wait for a START_GROUP message.
   `
 })
 ```
@@ -124,14 +137,7 @@ Agent({
 })
 ```
 
-### 7. Process groups
-
-For each group in dependency order:
-
-#### 7a. Spawn implementer teammates for this group
-
-For each incomplete task in the group, spawn an implementer:
-
+**Spawn implementer teammates for this group** — one per incomplete task:
 ```
 Agent({
   team_name: "work-<taskListName>",
@@ -145,9 +151,9 @@ Agent({
 })
 ```
 
-Spawn all implementers in parallel.
+Spawn all agents in parallel.
 
-#### 7b. Send START_GROUP to the Manager
+#### 8b. Send START_GROUP to the Manager
 
 ```
 SendMessage({
@@ -170,7 +176,7 @@ SendMessage({
 })
 ```
 
-#### 7c. Message loop
+#### 8c. Message loop
 
 Wait for messages from the Manager and handle them:
 
@@ -194,16 +200,19 @@ Wait for messages from the Manager and handle them:
 
 - **`MANAGER_REPORT` message**: Parse the report. Exit the message loop for this group.
 
-#### 7d. Shut down group implementers
+#### 8d. Shut down all group agents
 
-After the MANAGER_REPORT is received, shut down the ephemeral implementer teammates:
+After the MANAGER_REPORT is received, shut down all agents spawned for this group so their context is released:
 ```
+SendMessage({ to: "manager", message: "shutdown" })
+SendMessage({ to: "git-expert", message: "shutdown" })
+SendMessage({ to: "quality", message: "shutdown" })
 SendMessage({ to: "impl-1", message: "shutdown" })
 SendMessage({ to: "impl-2", message: "shutdown" })
 ...
 ```
 
-### 8. Verify QA logs
+### 9. Verify QA logs
 
 After each MANAGER_REPORT, verify the Quality agent actually ran all gates:
 
@@ -219,7 +228,7 @@ Some gates may not have run. Review the logs before proceeding.
 
 Also check `report.md` exists in the same directory.
 
-### 9. Handle results
+### 10. Handle results
 
 Parse the MANAGER_REPORT:
 
@@ -231,7 +240,7 @@ If `status: FAIL`:
 - The user already made their decision during ASK_USER (continue/stop/merge-anyway)
 - If they chose `stop`, halt the loop
 
-### 10. Print group progress
+### 11. Print group progress
 
 ```
 ──────────────────────────
@@ -242,24 +251,23 @@ If `status: FAIL`:
 ──────────────────────────
 ```
 
-If `--all` flag is set and more groups remain, loop back to step 7 for the next group.
+If `--all` flag is set and more groups remain, loop back to step 8 for the next group.
 
-### 11. Cleanup
+### 12. Cleanup
 
 After all groups are processed (or the user stops):
 
-1. Send a shutdown signal to all persistent teammates:
+1. **Re-enable stop hooks** — remove the workflow flag file:
+   ```bash
+   rm -f .claude/.workflow-running
    ```
-   SendMessage({ to: "manager", message: "shutdown" })
-   SendMessage({ to: "git-expert", message: "shutdown" })
-   SendMessage({ to: "quality", message: "shutdown" })
-   ```
-2. Delete the team:
+
+2. **Delete the team** (agents were already shut down per-group in step 8d):
    ```
    TeamDelete({ team_name: "work-<taskListName>" })
    ```
 
-### 12. Final summary
+### 13. Final summary
 
 ```
 ══════════════════════════════════
@@ -297,7 +305,7 @@ Next steps:
 - Do NOT run quality gates directly — delegate via the Manager to the Quality teammate
 - Do NOT skip QA log verification — always check that 8 gate log files exist after each group
 - Do NOT process groups in parallel — dependency order must be respected
+- DO spawn all agents fresh per group and shut them down after — every agent is ephemeral to prevent context bloat
 - DO spawn all agents as teammates — the Manager never spawns agents
-- DO spawn implementers per group and shut them down after — they are ephemeral
 - DO keep main agent context minimal — only QA_STATUS, ASK_USER, and MANAGER_REPORT flow back
 - DO verify QA logs independently after each MANAGER_REPORT

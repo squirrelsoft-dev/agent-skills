@@ -83,6 +83,8 @@ STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false')
 [[ "$STOP_HOOK_ACTIVE" == "true" ]] && echo '{"decision":"approve"}' && exit 0
 AGENT_TYPE=$(echo "$INPUT" | jq -r '.agent_type // "main"')
 [[ "$AGENT_TYPE" == "hook-agent" ]] && echo '{"decision":"approve"}' && exit 0
+# Skip when a workflow run is active (teams/subagents manage their own QA)
+[[ -f "$CLAUDE_PROJECT_DIR/.claude/.workflow-running" ]] && echo '{"decision":"approve"}' && exit 0
 ERRORS=""
 cd "$CLAUDE_PROJECT_DIR"
 UNCOMMITTED=$(git diff --name-only HEAD 2>/dev/null || echo "")
