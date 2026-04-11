@@ -51,20 +51,21 @@ setup() {
   assert_file_exists "$SKILL_DIR/references/commands/update-skills.md"
 }
 
-@test "package: all 5 agent references exist" {
+@test "package: all 6 agent references exist" {
   assert_file_exists "$SKILL_DIR/references/agents/architect.md"
   assert_file_exists "$SKILL_DIR/references/agents/implementer.md"
   assert_file_exists "$SKILL_DIR/references/agents/domain-implementer.md"
   assert_file_exists "$SKILL_DIR/references/agents/quality.md"
   assert_file_exists "$SKILL_DIR/references/agents/git-expert.md"
+  assert_file_exists "$SKILL_DIR/references/agents/manager.md"
 }
 
 @test "package: triage-skill.md reference exists" {
   assert_file_exists "$SKILL_DIR/references/triage-skill.md"
 }
 
-@test "package: total file count is 29" {
+@test "package: total file count is 30" {
   local count
   count=$(find "$SKILL_DIR" -type f -not -path "*/tests/*" 2>/dev/null | wc -l)
-  [ "$count" -eq 29 ]
+  [ "$count" -eq 30 ]
 }

@@ -4,7 +4,7 @@ description: 'Implement the next task group (or all groups) from a task breakdow
 
 # Work
 
-Orchestrate implementation of a task breakdown by coordinating the Git Expert, Implementer, and Quality agents. Uses Claude Code's native task tools to track group progress so state survives across context resets.
+Orchestrate implementation of a task breakdown by spawning a Manager agent that coordinates Git Expert, Implementer, and Quality agents. The Manager absorbs all verbose output — the main agent only sees compact status reports and user decision prompts.
 
 **Input:** `$ARGUMENTS` — task list name, optionally followed by `--all`
 
@@ -66,195 +66,129 @@ Work All: <taskListName>
 **If single group:**
 Find the next available group. If multiple are available, use `AskUserQuestion` to let the user pick. Auto-select if only one is available. Call `TaskCreate` for that group only.
 
-### 6. Process the queue
+### 6. Spawn the Manager
 
-Call `TaskList` to get pending tasks. For each pending task in order, run the pipeline below. After each group completes successfully, call `TaskUpdate` to mark it done before moving to the next.
-
-If `--all` is not set, stop after the first group.
-
----
-
-## Pipeline (per group)
-
-Run these phases in sequence for each group.
-
-### Phase 1 — Setup
-
-Derive names:
-- `taskGroupName` = `<taskListName>-group-<N>` (kebab-case)
-- `featureBranch` = `feat/<taskGroupName>`
-- For each incomplete task in the group, assign:
-  - `agentNumber` — sequential integer starting at 1
-  - `worktreeBranch` = `work/<taskGroupName>-<agentNumber>`
-
-Invoke the **Git Expert** agent with `Operation: SETUP`:
+Create a team and spawn the Manager as a named teammate:
 
 ```
+TeamCreate({ team_name: "work-<taskListName>" })
+
 Agent({
-  agent: "git-expert",
+  team_name: "work-<taskListName>",
+  name: "manager",
+  agent: "manager",
   prompt: `
-    Operation: SETUP
-    taskGroupName: <taskGroupName>
-    featureBranch: <featureBranch>
-    tasks:
-      - agentNumber: 1
-        taskTitle: <task title>
-        worktreeBranch: work/<taskGroupName>-1
-      - agentNumber: 2
-        taskTitle: <task title>
-        worktreeBranch: work/<taskGroupName>-2
-  `
-})
-```
-
-Wait for `GIT_SETUP_COMPLETE`. If setup fails, mark the group's task entry failed and stop.
-
-### Phase 2 — Implement
-
-Spawn one **Implementer** agent per incomplete task in the group. Tasks within a group are parallel — spawn all at once with `run_in_background: true`.
-
-For each task:
-
-```
-Agent({
-  agent: "implementer",
-  isolation: "worktree",
-  worktreeBranch: "<worktreeBranch>",
-  run_in_background: true,
-  prompt: `
-    Task: <task title>
-    Branch: <worktreeBranch>
-
-    <full contents of .claude/specs/<taskListName>/<task-title-kebab>.md>
-
-    Implement this spec exactly. Commit all changes to your branch when done.
-  `
-})
-```
-
-Wait for all Implementers to complete. Collect `IMPLEMENTATION_COMPLETE` blocks.
-
-If any Implementer reports `status: failed`, warn the user and ask via `AskUserQuestion`:
-- `"Continue with passing tasks"` — proceed to Phase 3, skipping failed branches
-- `"Stop"` — mark the group failed, stop
-
-### Phase 3 — Quality gates
-
-For each branch where Implementer reported `status: success`, spawn a **Quality** agent. Run them sequentially — one at a time, not in parallel.
-
-```
-Agent({
-  agent: "quality",
-  isolation: "worktree",
-  worktreeBranch: "<worktreeBranch>",
-  run_in_background: false,
-  prompt: `
-    branch: <worktreeBranch>
-    taskTitle: <task title>
-    specFile: .claude/specs/<taskListName>/<task-title-kebab>.md
-  `
-})
-```
-
-Parse the `QA_REPORT_START ... QA_REPORT_END` block from each Quality agent's output.
-
-After each QA report, show the user:
-
-```
-QA Results — <worktreeBranch> (<task title>)
-
-  Lint             [SKIPPED]
-  Typecheck        [SKIPPED]
-  Build            [SKIPPED]
-  Test             [SKIPPED]
-  Simplify         [PASS|FAIL]
-  Review           [PASS|FAIL]
-  Security Review  [PASS|FAIL]
-  Security Scan    [PASS|FAIL]
-
-  Overall: [PASS|FAIL]
-  Notes: <notes>
-```
-
-Then ask for confirmation via `AskUserQuestion`:
-
-If overall **PASS**:
-- `"Merge this branch"` ✅
-- `"Skip this branch"` ⏭
-- `"Stop here"` 🛑
-
-If overall **FAIL**:
-- `"Skip this branch"` ⏭
-- `"Merge anyway (I accept the risk)"` ⚠️
-- `"Stop here"` 🛑
-
-If the user selects **"Stop here"**: call `TaskUpdate` to mark the group stopped and halt entirely. Do not process remaining branches or groups.
-
-Collect the list of branches the user approved for merging.
-
-### Phase 4 — Merge
-
-Invoke the **Git Expert** agent with `Operation: MERGE`:
-
-```
-Agent({
-  agent: "git-expert",
-  run_in_background: false,
-  prompt: `
-    Operation: MERGE
-    featureBranch: <featureBranch>
+    mode: subagents
+    taskListName: <taskListName>
     taskListFile: .claude/tasks/<taskListName>.md
-    branches:
-      - <worktreeBranch-1>
-      - <worktreeBranch-2>
-    completedTasks:
-      - <task title 1>
-      - <task title 2>
+    specDir: .claude/specs/<taskListName>/
+    lintCmd: <project lint command or empty>
+    typecheckCmd: <project typecheck command or empty>
+    buildCmd: <project build command or empty>
+    testCmd: <project test command or empty>
+
+    Wait for START_GROUP messages. For each group, coordinate
+    Git Expert, Implementers, and Quality agents. Send ASK_USER
+    messages when user decisions are needed. Send MANAGER_REPORT
+    when the group is complete.
   `
 })
 ```
 
-Wait for `GIT_MERGE_COMPLETE`. Report any conflicts that were resolved.
+### 7. Process groups
 
-### Phase 5 — Verify
-
-Invoke the **Git Expert** agent with `Operation: VERIFY`:
+For each group in dependency order, send a `START_GROUP` message to the Manager:
 
 ```
-Agent({
-  agent: "git-expert",
-  run_in_background: false,
-  prompt: `
-    Operation: VERIFY
-    featureBranch: <featureBranch>
-    verificationCommands:
-      - npm run build
-      - npm run lint
-      - npm run typecheck
-      - npm test
+SendMessage({
+  to: "manager",
+  message: `
+    START_GROUP
+    groupNumber: <N>
+    groupLabel: <label>
+    tasks:
+      - title: <task title>
+        spec: .claude/specs/<taskListName>/<task-title-kebab>.md
+      - title: <task title>
+        spec: .claude/specs/<taskListName>/<task-title-kebab>.md
+    logDir: .claude/quality/<taskListName>/group-<N>/
+    START_GROUP_END
   `
 })
 ```
 
-Wait for `GIT_VERIFY_COMPLETE`. If verification fails, report which checks failed and do not mark the group complete — tell the user to resolve issues and re-run.
+Then enter a **message loop** — wait for messages from the Manager and handle them:
 
-### Phase 6 — Complete
+- **`ASK_USER` message**: Parse the question and options. Call `AskUserQuestion` with them. Send the user's choice back:
+  ```
+  SendMessage({
+    to: "manager",
+    message: `
+      USER_ANSWER
+      answer: <user's choice>
+      USER_ANSWER_END
+    `
+  })
+  ```
+  If the user chose `stop`, also stop the main loop after the Manager sends its MANAGER_REPORT.
 
-Call `TaskUpdate` to mark the group's task entry as complete.
+- **`MANAGER_REPORT` message**: Parse the report. Exit the message loop for this group.
 
-Print progress:
+### 8. Verify QA logs
+
+After each MANAGER_REPORT, verify the Quality agent actually ran all gates:
+
+```bash
+ls .claude/quality/<taskListName>/group-<N>/gate-*.log 2>/dev/null | wc -l
+```
+
+Expected: 8 log files. If fewer exist, warn the user:
+```
+Warning: Only <N>/8 quality gate logs found at .claude/quality/<taskListName>/group-<N>/
+Some gates may not have run. Review the logs before proceeding.
+```
+
+Also check `report.md` exists in the same directory.
+
+### 9. Handle results
+
+Parse the MANAGER_REPORT:
+
+If `status: PASS`:
+1. Call `TaskUpdate` to mark the group's task entry as complete
+2. Read `.claude/tasks/<taskListName>.md` and flip `- [ ]` to `- [x]` for every task in this group
+
+If `status: FAIL`:
+- The user already made their decision during ASK_USER (continue/stop/merge-anyway)
+- If they chose `stop`, halt the loop
+
+### 10. Print group progress
 
 ```
 ──────────────────────────
 ✓ Group <N> — <label> complete. Feature branch: feat/<taskGroupName>
-  Tasks merged: <N>  |  Skipped: <N>
+  Tasks completed: <N>  |  Failed: <N>
+  QA logs: .claude/quality/<taskListName>/group-<N>/
   Next: Group <M> — <label>   (or "All groups complete")
 ──────────────────────────
 ```
 
----
+If `--all` flag is set and more groups remain, loop back to step 7 for the next group.
 
-## Final summary (after all groups processed)
+### 11. Cleanup
+
+After all groups are processed (or the user stops):
+
+1. Send a shutdown signal to the Manager:
+   ```
+   SendMessage({ to: "manager", message: "shutdown" })
+   ```
+2. Delete the team:
+   ```
+   TeamDelete({ team_name: "work-<taskListName>" })
+   ```
+
+### 12. Final summary
 
 ```
 ══════════════════════════════════
@@ -262,8 +196,8 @@ Print progress:
 ══════════════════════════════════
 
 Groups completed this session:
-  ✓ Group 1 — <label>  →  feat/<taskGroupName>
-  ✓ Group 2 — <label>  →  feat/<taskGroupName>
+  ✓ Group 1 — <label>  →  feat/<taskGroupName>  (QA: PASS, logs: .claude/quality/...)
+  ✓ Group 2 — <label>  →  feat/<taskGroupName>  (QA: PASS, logs: .claude/quality/...)
 
 Previously complete (skipped):
   ✓ Group N — <label>
@@ -280,17 +214,17 @@ Next steps:
 
 ## Error handling
 
-- **Implementer failure**: warn user, offer continue-with-passing or stop
-- **QA report missing**: treat branch as FAIL, show raw output to user
-- **Git conflict**: Git Expert resolves best-effort and documents it; user sees conflict summary before Phase 4 completes
-- **Verification failure**: do not mark group complete; tell user what failed
+- **Manager not responding**: If no message is received within a reasonable time, warn the user and suggest restarting
+- **Malformed MANAGER_REPORT**: Treat as FAIL, show raw output to user
+- **Missing QA logs**: Warn user even if MANAGER_REPORT says PASS — log files are the source of truth for gate execution
 - **Blocked groups** (in `--all` mode): if a group's dependencies are unmet after prior groups complete, report blockage and stop
 
 ## Rules
 
-- Do NOT implement anything directly — always delegate to the Implementer agent
-- Do NOT merge anything directly — always delegate to the Git Expert agent
-- Do NOT mark tasks complete in the task list directly — Git Expert owns that
-- Do NOT skip the Quality phase — every Implementer branch must pass through Quality before merging
+- Do NOT implement anything directly — the Manager delegates to Implementer agents
+- Do NOT merge anything directly — the Manager delegates to the Git Expert agent
+- Do NOT run quality gates directly — the Manager delegates to the Quality agent
+- Do NOT skip QA log verification — always check that 8 gate log files exist after each group
 - Do NOT process groups in parallel — dependency order must be respected
-- DO spawn all Implementers in a group in parallel — that is the point of grouping
+- DO keep main agent context minimal — only ASK_USER messages and MANAGER_REPORT flow back
+- DO verify QA logs independently after each MANAGER_REPORT

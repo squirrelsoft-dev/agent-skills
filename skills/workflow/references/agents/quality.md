@@ -19,8 +19,14 @@ You will be given:
 - `typecheckCmd` — project typecheck command (optional — if provided, run Gate 2)
 - `buildCmd` — project build command (optional — if provided, run Gate 3)
 - `testCmd` — project test command (optional — if provided, run Gate 4)
+- `logDir` — directory to write gate log files (optional — e.g. `.claude/quality/issue-3/group-1/`)
 
 ## Process
+
+If `logDir` is provided, create the directory at the start:
+```bash
+mkdir -p <logDir>
+```
 
 Run gates in order. You MUST run every applicable gate — do NOT skip, combine, or omit any gate. For each gate:
 1. Run the gate
@@ -29,6 +35,7 @@ Run gates in order. You MUST run every applicable gate — do NOT skip, combine,
 4. Max 3 remediation attempts per gate
 5. Only mark PASS once the gate is clean
 6. If a gate cannot be fixed after 3 attempts, mark it FAIL and continue to the next gate — do not stop
+7. **Write a log file** (if `logDir` provided) — see "Gate Log Files" below
 
 ### Gate 1 — Lint (only if `lintCmd` provided)
 Run the provided lint command via Bash.
@@ -79,6 +86,41 @@ The remediation agent MUST commit its fixes before returning:
 git add -A
 git commit -m "fix(<gate-name>): <brief description of fix>"
 ```
+
+## Gate Log Files
+
+If `logDir` is provided, write a log file after each gate completes. Use the Write tool to create each file.
+
+**File naming:** `<logDir>/gate-<N>-<name>.log` where N is the gate number and name is the gate identifier:
+- `gate-1-lint.log`
+- `gate-2-typecheck.log`
+- `gate-3-build.log`
+- `gate-4-test.log`
+- `gate-5-simplify.log`
+- `gate-6-review.log`
+- `gate-7-security-review.log`
+- `gate-8-security-scan.log`
+
+**Log file format:**
+```
+Gate: <name>
+Status: PASS | FAIL | SKIPPED
+Attempts: <N>
+
+--- Output ---
+<command output or skill result, trimmed to max 200 lines>
+
+--- Remediation ---
+Attempt 1: <description of fix and result>
+Attempt 2: <description of fix and result>
+...
+```
+
+For SKIPPED gates (command not provided), write the log with `Status: SKIPPED` and `Attempts: 0` with no output or remediation sections.
+
+After writing the `QUALITY_GATE_REPORT_END` block, also write the full report to `<logDir>/report.md`.
+
+If `logDir` is not provided, skip all log file writing — this preserves backward compatibility.
 
 ## Rules
 - Do NOT merge anything

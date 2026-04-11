@@ -12,13 +12,14 @@ teardown() { common_teardown; }
   assert_dir_exists "$TEST_TEMP_DIR/.claude/agents"
 }
 
-@test "install-agents: always installs architect, quality, git-expert" {
+@test "install-agents: always installs architect, quality, git-expert, manager" {
   cd "$TEST_TEMP_DIR"
   ORCHESTRATION=subagents run "$SCRIPTS_DIR/install-agents.sh"
   [ "$status" -eq 0 ]
   assert_file_exists "$TEST_TEMP_DIR/.claude/agents/architect.md"
   assert_file_exists "$TEST_TEMP_DIR/.claude/agents/quality.md"
   assert_file_exists "$TEST_TEMP_DIR/.claude/agents/git-expert.md"
+  assert_file_exists "$TEST_TEMP_DIR/.claude/agents/manager.md"
 }
 
 @test "install-agents: subagents mode installs implementer.md" {

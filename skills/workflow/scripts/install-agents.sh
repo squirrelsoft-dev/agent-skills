@@ -12,10 +12,11 @@ mkdir -p .claude/agents
 
 ORCHESTRATION="${ORCHESTRATION:-subagents}"
 
-# architect, quality, and git-expert always installed
+# architect, quality, git-expert, and manager always installed
 cp "$REFS/architect.md"  .claude/agents/architect.md
 cp "$REFS/quality.md"    .claude/agents/quality.md
 cp "$REFS/git-expert.md" .claude/agents/git-expert.md
+cp "$REFS/manager.md"    .claude/agents/manager.md
 
 # implementer variant depends on mode
 if [ "$ORCHESTRATION" = "teams" ]; then
