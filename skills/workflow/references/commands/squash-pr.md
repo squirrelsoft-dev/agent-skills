@@ -1,12 +1,16 @@
 ---
-description: 'Squash all group branches for a task list into one clean feature branch and open a PR'
+description: 'Squash all commits on a feature branch into one clean commit and open a PR'
 ---
 
 # Squash & PR
 
-Squash all `feat/<taskListName>-group-*` branches into a single clean feature branch named from the task list title, then open a pull request.
+Squash the feature branch down to a single clean commit and open a pull request. Works in two modes depending on how the branch was built:
 
-**Input:** `$ARGUMENTS` — task list name (e.g. `issue-3`). Maps to `.claude/tasks/$ARGUMENTS.md`. Required.
+- **Team mode** (`feat/$ARGUMENTS` with checkpoint commits per task) — squash all commits on the feature branch since it diverged from base
+
+- **Subagent mode** (`feat/$ARGUMENTS-group-*` branches) — merge all group branches first, then squash
+
+  **Input:** `$ARGUMENTS` — task list name (e.g. `issue-3`). Maps to `.claude/tasks/$ARGUMENTS.md`. Required.
 
 ---
 
@@ -17,89 +21,150 @@ Squash all `feat/<taskListName>-group-*` branches into a single clean feature br
 Read `.claude/tasks/$ARGUMENTS.md`. If it doesn't exist, tell the user and stop.
 
 Extract:
-- **Title** — the first line, which matches `# Task Breakdown: <title>`. Strip the prefix to get the raw title (e.g. `Set up Turborepo monorepo structure`).
-- **Issue number** — parse from `$ARGUMENTS` using the pattern `issue-<N>` → `<N>`. If the task list name doesn't follow that pattern, proceed without an issue number.
-- **Groups** — all `## Group N — <label>` entries, with their tasks and completion status (`- [x]` vs `- [ ]`).
 
-### 2. Derive the target branch name
+- **Title** — the first line, matching `# Task Breakdown: <title>`. Strip the prefix to get the raw title.
+- **Issue number** — parse from `$ARGUMENTS` using the pattern `issue-<N>` → `<N>`. If no match, proceed without an issue number.
+- **Groups** — all `## Group N — <label>` entries with completion status.
 
-Convert the raw title to kebab-case:
-- Lowercase everything
-- Replace spaces and special characters with `-`
-- Collapse multiple dashes
-- Example: `Set up Turborepo monorepo structure` → `feat/set-up-turborepo-monorepo-structure`
+### 2. Detect base branch
 
-Store as `targetBranch`.
+```bash
+git branch -a
+```
 
-### 3. Detect base branch
+Determine whether the repo uses `main` or `master`. Store as `<base>`.
 
-Run `git branch -a` and determine whether the repo uses `main` or `master`. Store as `<base>`.
+### 3. Detect mode and find the feature branch
 
-### 4. Find all group branches
+**Check for team mode branch:**
 
-Run:
+```bash
+git branch --list "feat/$ARGUMENTS"
+```
+
+**Check for subagent mode group branches:**
+
 ```bash
 git branch --list "feat/$ARGUMENTS-group-*"
 ```
 
-Collect all matching branches in group-number order (group-1, group-2, etc.).
+**Decision:**
 
-If no group branches are found, tell the user and stop. Suggest running `/work $ARGUMENTS --all` first.
+- If `feat/$ARGUMENTS` exists → **team mode**
 
-Warn about any groups that are still incomplete in the task list (tasks with `- [ ]`). Ask the user if they want to continue anyway or stop.
+- If `feat/$ARGUMENTS-group-*` branches exist → **subagent mode**
+
+- If neither exists → tell the user and stop. Suggest running `/work $ARGUMENTS --all` first.
+
+  Warn about any groups with incomplete tasks (`- [ ]`). Ask the user if they want to continue anyway or stop.
+
+### 4. Derive the target branch name
+
+Convert the raw title to kebab-case:
+
+- Lowercase everything
+
+- Replace spaces and special characters with `-`
+
+- Collapse multiple dashes
+
+- Example: `Intent Screen Router & Path Management` → `feat/intent-screen-router-path-management`
+
+  Store as `targetBranch`.
 
 ### 5. Detect git platform
 
-Run `git remote get-url origin` and classify:
+```bash
+git remote get-url origin
+```
+
 - Contains `github.com` → **GitHub** (use `gh` CLI)
-- Contains `gitlab.com` or self-hosted GitLab pattern → **GitLab** (use `glab` CLI)
+- Contains `gitlab.com` or self-hosted GitLab → **GitLab** (use `glab` CLI)
 - Contains `bitbucket.org` → **Bitbucket** (provide manual URL)
 
-### 6. Create the target branch
+### 6. Build the source branch
 
-Check if `targetBranch` already exists:
+**Team mode:**
+
+The source branch is already `feat/$ARGUMENTS`. No merging needed — all checkpoint commits are already on it.
+
+Confirm commits exist since base:
+
 ```bash
-git branch --list "<targetBranch>"
+git log --oneline <base>..feat/$ARGUMENTS
 ```
 
-If it exists, ask the user:
-- `"Reset and rebuild it"` — delete and recreate from `<base>`
-- `"Stop"` — halt so the user can handle it manually
+If no commits, tell the user and stop.
 
-If it does not exist, create it from `<base>`:
+**Subagent mode:**
+
+Create a merge branch from base:
+
 ```bash
 git checkout <base>
-git checkout -b <targetBranch>
+git checkout -b feat/$ARGUMENTS-merge
 ```
 
-### 7. Merge all group branches in order
+Merge all group branches in order:
 
-For each group branch in order:
 ```bash
-git merge <group-branch> --no-ff --no-edit
+git merge feat/$ARGUMENTS-group-<N> --no-ff --no-edit
 ```
 
-If there are merge conflicts:
+If there are conflicts:
+
 - Resolve by accepting incoming changes where unambiguous
-- Document every conflict and resolution in the final summary
+
+- Document every conflict and resolution
+
 - Stage and complete the merge:
+
   ```bash
   git add -A
   git commit --no-edit
   ```
 
-After all merges, confirm the result with:
+  The merge branch is now the source for squashing. Store as `sourceBranch` = `feat/$ARGUMENTS-merge`.
+
+  For team mode, `sourceBranch` = `feat/$ARGUMENTS`.
+
+### 7. Create the target branch
+
+Check if `targetBranch` already exists:
+
 ```bash
-git log --oneline <base>..HEAD
+git branch --list "<targetBranch>"
 ```
 
-### 8. Squash into one commit
+If it exists, ask the user:
+
+- `"Reset and rebuild"` — delete and recreate from `<base>`
+
+- `"Stop"` — halt so the user can handle it manually
+
+  Create from base:
+
+```bash
+git checkout <base>
+git checkout -b <targetBranch>
+git merge <sourceBranch> --ff-only 2>/dev/null || git merge <sourceBranch> --no-ff --no-edit
+```
+
+### 8. Squash to one commit
+
+Find the merge base:
+
+```bash
+git merge-base <base> HEAD
+```
+
+Soft reset to it:
 
 ```bash
 git reset --soft $(git merge-base <base> HEAD)
 ```
 
-Generate a conventional commit message:
+Generate the commit message:
 
 ```
 feat(<scope>): <title lowercase, imperative> (#<issue>)
@@ -109,17 +174,25 @@ feat(<scope>): <title lowercase, imperative> (#<issue>)
 Closes #<issue>
 ```
 
-- `scope` — the primary package or area affected, inferred from the task list (e.g. `monorepo`, `auth`, `db`)
-- If no issue number, omit `(#<issue>)` and `Closes #<issue>`
+- `scope` — primary package or area affected, inferred from the task list (e.g. `session`, `auth`, `api`)
 
-Commit:
+- Omit `(#<issue>)` and `Closes #<issue>` if no issue number
+
+  Commit:
+
 ```bash
 git commit -m "<message>"
 ```
 
-### 9. Build the PR body
+Confirm:
 
-Construct the PR body from the task list structure:
+```bash
+git log --oneline <base>..HEAD
+```
+
+Should show exactly one commit.
+
+### 9. Build the PR body
 
 ```markdown
 ## Summary
@@ -129,10 +202,12 @@ Construct the PR body from the task list structure:
 ## Changes
 
 ### Group 1 — <label>
+
 - ✅ Task title
 - ✅ Task title
 
 ### Group 2 — <label>
+
 - ✅ Task title
 - ✅ Task title
 
@@ -140,17 +215,12 @@ Construct the PR body from the task list structure:
 
 ## Test plan
 
-- `turbo build` — all packages and apps build cleanly
-- `turbo lint` — no lint errors
-- `turbo typecheck` — no type errors
-- `turbo dev` — verify apps start
+<infer appropriate verification steps from task list content — build commands, key integration points, notable edge cases covered>
 
 ## Issue
 
 Closes #<issue>
 ```
-
-For the test plan, infer appropriate verification steps from the task list content (build commands, dev server ports, key integration points mentioned in tasks).
 
 ### 10. Push the branch
 
@@ -161,14 +231,17 @@ git push --force-with-lease origin <targetBranch>
 ### 11. Open the PR
 
 Check if a PR already exists for `targetBranch`:
+
 - **GitHub:** `gh pr list --head <targetBranch>`
+
 - **GitLab:** `glab mr list --source-branch <targetBranch>`
 
-If a PR already exists, print the existing PR URL and stop.
+  If a PR already exists, print the existing PR URL and stop.
 
-If no PR exists, create one:
+  If no PR exists, create one:
 
 - **GitHub:**
+
   ```bash
   gh pr create \
     --title "feat(<scope>): <title> (#<issue>)" \
@@ -177,6 +250,7 @@ If no PR exists, create one:
   ```
 
 - **GitLab:**
+
   ```bash
   glab mr create \
     --title "feat(<scope>): <title> (#<issue>)" \
@@ -185,27 +259,38 @@ If no PR exists, create one:
   ```
 
 - **Bitbucket:** Print the manual PR URL:
+
   ```
   https://bitbucket.org/<org>/<repo>/pull-requests/new?source=<targetBranch>
   ```
 
-### 12. Summary
+### 12. Cleanup (subagent mode only)
 
-Print:
+If subagent mode, remove the temporary merge branch:
+
+```bash
+git branch -d feat/$ARGUMENTS-merge
+```
+
+### 13. Summary
 
 ```
 ══════════════════════════════════
   Squash PR: $ARGUMENTS
 ══════════════════════════════════
 
+  Mode:          team | subagent
   Task list:     .claude/tasks/$ARGUMENTS.md
   Title:         <raw title>
+  Source branch: <sourceBranch>
   Target branch: <targetBranch>
   Base branch:   <base>
 
-  Group branches squashed:
-    feat/$ARGUMENTS-group-1 — <label>
-    feat/$ARGUMENTS-group-2 — <label>
+  Commits squashed: <N>
+
+  Groups included:
+    Group 1 — <label>  (<N> tasks)
+    Group 2 — <label>  (<N> tasks)
     ...
 
   Commit: feat(<scope>): <title> (#<issue>)

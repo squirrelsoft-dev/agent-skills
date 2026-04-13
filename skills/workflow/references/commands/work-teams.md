@@ -1,10 +1,10 @@
 ---
-description: 'Implement a group-based task breakdown using a coordinated agent team'
+description: 'Implement a task list one task at a time using a tight implement → review → commit loop'
 ---
 
 # Work (Team)
 
-Orchestrate implementation of a group-based task breakdown by spawning a team of agents and letting the Manager coordinate them. The main agent spawns all teammates (manager, quality, domain-implementers), sends group assignments, handles user decisions, and verifies QA logs. The Manager coordinates domain agents and Quality via messages — it never spawns agents.
+Implement a task list by processing each incomplete task sequentially: spawn an implementer, run fast quality gates on the diff, commit as a checkpoint, then move on. After all tasks in a group complete, run a full 8-gate quality pass. The main agent never reads spec files or source files — it only tracks state and orchestrates agents.
 
 **Input:** `$ARGUMENTS` — task list name, optionally followed by `--all`
 
@@ -18,18 +18,22 @@ Orchestrate implementation of a group-based task breakdown by spawning a team of
 ### 1. Parse and validate
 
 Split `$ARGUMENTS` on whitespace. Extract:
+
 - `taskListName` — first token (e.g. `issue-3`)
+
 - `allFlag` — true if `--all` is present
 
-Read `.claude/tasks/$ARGUMENTS.md`. If it doesn't exist, tell the user and stop.
+  Read `.claude/tasks/$ARGUMENTS.md`. If it doesn't exist, tell the user and stop.
 
-Verify the file uses **combined group+domain format** — it should contain `## Group N —` headers with `### Domain:` subsections. If it contains only `## Domain:` headers without group wrappers, tell the user: "This task file uses the old domain-only format. Please re-run `/breakdown $ARGUMENTS` to generate the updated format." and stop. If it contains `## Group N —` headers without `### Domain:` subsections, tell the user: "This task file uses group format. Use `/work` instead." and stop.
+  Verify the file uses **combined group+domain format** — it should contain `## Group N —` headers with `### Domain:` subsections. If it contains only `## Domain:` headers without group wrappers, tell the user: "This task file uses the old domain-only format. Please re-run `/breakdown $ARGUMENTS` to generate the updated format." and stop.
 
-Parse the file to extract:
+  Parse the file to extract:
+
 - Each group's number, label, and dependencies
+
 - Each domain within each group, with agent name and owned files
-- All tasks within each domain with their descriptions and coordination points
-- The Shared Files table
+
+- All tasks within each domain with their spec paths (`.claude/specs/$ARGUMENTS/<task-title-kebab>.md`)
 
 ### 2. Verify specs exist
 
@@ -39,265 +43,305 @@ If any specs are missing, list them and suggest running `/spec $ARGUMENTS` first
 
 ### 3. Setup
 
-1. **Disable stop hooks** — create a flag file so the stop-quality-gate hook skips during the workflow run (teams manage their own QA):
+1. **Disable stop hooks** — create a flag file so the stop-quality-gate hook skips during the workflow run:
+
    ```bash
    touch .claude/.workflow-running
    ```
 
-2. **Create the feature branch** from current HEAD:
+2. **Create or switch to the feature branch**:
+
    ```bash
-   git checkout -b feat/$ARGUMENTS
-   ```
-   If the branch already exists, switch to it:
-   ```bash
-   git checkout feat/$ARGUMENTS
+   git checkout -b feat/$ARGUMENTS 2>/dev/null || git checkout feat/$ARGUMENTS
    ```
 
-3. **Create tasks** — For each incomplete group, call `TaskCreate` with:
-   - `subject`: `$ARGUMENTS — Group <N>: <label>`
-   - `description`: Comma-separated list of incomplete task titles in the group
+3. **Create the team**:
 
-4. **Set up dependencies** via `TaskUpdate`:
-   - If a group has `_Depends on: Group N_`, add `addBlockedBy` on the depended group's task
+   ```
+   TeamCreate({ team_name: "work-$ARGUMENTS" })
+   ```
 
-5. **Identify unique domains** — Collect all unique domain labels across all groups, along with their `Files owned:` declarations.
+4. Print the queue:
 
-Print the queue:
 ```
-Work Team: $ARGUMENTS
+Work: $ARGUMENTS
 ──────────────────────────
 Feature branch: feat/$ARGUMENTS
 
-Domains:
-  <domain-label>  <files owned>
-  <domain-label>  <files owned>
-  ...
-
 Groups:
-  [queued] Group 1 — <label>  (<N> tasks across <M> domains)
-  [queued] Group 2 — <label>  (<N> tasks across <M> domains)
+  [queued] Group 1 — <label>  (<N> tasks)
+  [queued] Group 2 — <label>  (<N> tasks)
   ...
   [complete] Group N — <label>  (skipped)
 ──────────────────────────
 ```
 
-### 4. Create team
+### 4. Process groups
 
-```
-TeamCreate({ team_name: "work-$ARGUMENTS" })
-```
+For each group in dependency order (respecting `_Depends on: Group N_` declarations):
 
-### 5. Process groups
+#### 4a. Process each task sequentially
 
-For each group in dependency order:
+Collect all incomplete tasks (`- [ ]`) in this group, in the order they appear in the task file. For each task:
 
-#### 5a. Spawn all agents for this group
+---
 
-All agents are **ephemeral per group** — spawned fresh with clean context at the start of each group and shut down at the end. This prevents context bloat across groups.
+**Step i — Implement**
 
-**Spawn the Manager:**
+Spawn a fresh implementer agent:
+
 ```
 Agent({
   team_name: "work-$ARGUMENTS",
-  name: "manager",
-  agent: "manager",
+  name: "impl",
+  agent: "domain-implementer",
+  mode: "acceptEdits",
   prompt: `
-    mode: teams
-    taskListName: $ARGUMENTS
-    taskListFile: .claude/tasks/$ARGUMENTS.md
-    featureBranch: feat/$ARGUMENTS
-    specDir: .claude/specs/$ARGUMENTS/
-    domains:
-      - label: <domain-label>
-        filesOwned: <files owned>
-      ...
-    sharedFiles:
-      <full Shared Files table>
-    lintCmd: <project lint command or empty>
-    typecheckCmd: <project typecheck command or empty>
-    buildCmd: <project build command or empty>
-    testCmd: <project test command or empty>
+    You are an implementer agent on branch feat/$ARGUMENTS.
 
-    You coordinate via SendMessage only. Wait for a START_GROUP message.
+    ## Your Task
+    Title: <task title>
+    Spec: .claude/specs/$ARGUMENTS/<task-title-kebab>.md
+    Domain: <domain-label>
+    Files owned: <files owned for this domain>
+
+    ## Instructions
+    1. Read the spec file at the path above
+    2. Read any existing source files listed in the spec
+    3. Implement the spec exactly
+    4. Do NOT commit
+    5. Do NOT push
+    6. When done, send TASK_COMPLETE to main:
+       TASK_COMPLETE
+       task: <task title>
+       status: success | failed
+       notes: <one-line summary or "none">
+       TASK_COMPLETE_END
   `
 })
 ```
 
-**Spawn the Quality agent:**
+Wait for `TASK_COMPLETE` from `impl`.
+
+If `status: failed`:
+
+- Ask the user: "Task `<title>` failed: `<notes>`. Skip and continue, retry, or stop?"
+
+- Handle response before proceeding
+
+  Shut down the implementer:
+
+```
+SendMessage({ to: "impl", message: "shutdown" })
+```
+
+---
+
+**Step ii — Fast quality gates**
+
+Spawn a quality agent scoped to the diff only:
+
 ```
 Agent({
   team_name: "work-$ARGUMENTS",
   name: "quality",
   agent: "quality",
+  mode: "acceptEdits",
   prompt: `
-    You are the Quality agent. Wait for RUN_GATES messages from the manager.
-    For each request, run all 8 quality gates. Send QA_PROGRESS notifications
-    to the manager when gates fail or remediation occurs. Send the final
-    QUALITY_GATE_REPORT back to the manager when complete.
+    You are the quality agent.
+    Branch: feat/$ARGUMENTS
+    Task: <task title>
+    Spec: .claude/specs/$ARGUMENTS/<task-title-kebab>.md
+    logDir: .claude/quality/$ARGUMENTS/task-<kebab-title>/
+
+    Run ONLY these gates on the uncommitted diff (git diff HEAD):
+      Gate 1 — Lint (lintCmd: <lintCmd or empty>)
+      Gate 2 — Typecheck (typecheckCmd: <typecheckCmd or empty>)
+      Gate 6 — Review (spec-aware code review)
+
+    Skip Gates 3, 4, 5, 7, 8 — these run in the full group pass later.
+
+    Auto-remediate issues up to 3 attempts per gate.
+    Send FAST_QA_REPORT when complete:
+      FAST_QA_REPORT
+      task: <task title>
+      gate_lint: PASS | FAIL | SKIPPED
+      gate_typecheck: PASS | FAIL | SKIPPED
+      gate_review: PASS | FAIL
+      overall: PASS | FAIL
+      notes: <one-line summary or "none">
+      FAST_QA_REPORT_END
   `
 })
 ```
 
-**Spawn domain-implementer teammates** — one per unique domain involved in this group:
+Wait for `FAST_QA_REPORT`.
+
+Display progress:
+
+```
+  [task] <title>
+    lint:       PASS | FAIL | SKIPPED
+    typecheck:  PASS | FAIL | SKIPPED
+    review:     PASS | FAIL
+```
+
+If `overall: FAIL`:
+
+- Ask the user: "Fast QA failed on `<title>` (<failed gates>). Commit anyway, skip task, or stop?"
+
+- Handle response
+
+  Shut down the quality agent:
+
+```
+SendMessage({ to: "quality", message: "shutdown" })
+```
+
+---
+
+**Step iii — Commit checkpoint**
+
+Spawn a fresh git-expert for this commit only:
+
 ```
 Agent({
   team_name: "work-$ARGUMENTS",
-  name: "impl-<domain-label>",
-  agent: "domain-implementer",
+  name: "git-expert",
+  agent: "git-expert",
+  mode: "acceptEdits",
   prompt: `
-    You are a domain-implementer agent.
-    Domain: <domain-label>
-    Feature branch: feat/$ARGUMENTS
+    You are the git-expert for feat/$ARGUMENTS.
+    Execute this single COMMIT operation, report GIT_COMMIT_COMPLETE, then stop.
+    Do NOT push. Do NOT modify history.
 
-    ## File Ownership
-    <files owned list>
-
-    ## Shared Files
-    <full Shared Files table>
-
-    ## Instructions
-    Wait for GROUP_ASSIGNMENT messages from the manager.
-    Implement tasks, then send GROUP_COMPLETE back to the manager.
-    Do NOT commit. Do NOT push. Do NOT run destructive git commands.
+    Operation: COMMIT
+    branch: feat/$ARGUMENTS
+    message: feat(<domain>): <task title>
+    taskListFile: .claude/tasks/$ARGUMENTS.md
+    taskTitle: <task title>
   `
 })
 ```
 
-Spawn all agents in parallel.
-
-#### 5b. Send START_GROUP to the Manager
+Wait for `GIT_COMMIT_COMPLETE`, then immediately shut down:
 
 ```
-SendMessage({
-  to: "manager",
-  message: `
-    START_GROUP
-    groupNumber: <N>
-    groupLabel: <label>
-    tasks:
-      - domain: <domain-label>
-        title: <task title>
-        spec: .claude/specs/$ARGUMENTS/<task-title-kebab>.md
-      - domain: <domain-label>
-        title: <task title>
-        spec: .claude/specs/$ARGUMENTS/<task-title-kebab>.md
+SendMessage({ to: "git-expert", message: "shutdown" })
+```
+
+Print:
+
+```
+  ✓ <task title>  (checkpoint committed)
+```
+
+---
+
+Repeat steps i–iii for the next task in the group.
+
+#### 4b. Full group quality pass
+
+After all tasks in the group are committed, spawn a fresh quality agent for the full 8-gate pass:
+
+```
+Agent({
+  team_name: "work-$ARGUMENTS",
+  name: "quality-full",
+  agent: "quality",
+  mode: "acceptEdits",
+  prompt: `
+    You are the quality agent running a full group pass.
+    Branch: feat/$ARGUMENTS
+    Task: Group <N> — <label> (full pass)
     logDir: .claude/quality/$ARGUMENTS/group-<N>/
-    teammates: [quality, impl-ui, impl-api, ...]
-    START_GROUP_END
+    lintCmd: <lintCmd or empty>
+    typecheckCmd: <typecheckCmd or empty>
+    buildCmd: <buildCmd or empty>
+    testCmd: <testCmd or empty>
+
+    Run ALL 8 gates on the current branch state.
+    Auto-remediate up to 3 attempts per gate.
+    Send QUALITY_GATE_REPORT when complete.
   `
 })
 ```
 
-#### 5c. Message loop
+Wait for `QUALITY_GATE_REPORT`.
 
-Wait for messages from the Manager and handle them:
+Display:
 
-- **`ASK_USER` message**: Parse the question and options. Call `AskUserQuestion` with them. Send the user's choice back:
-  ```
-  SendMessage({
-    to: "manager",
-    message: `
-      USER_ANSWER
-      answer: <user's choice>
-      USER_ANSWER_END
-    `
-  })
-  ```
-  If the user chose `stop`, also stop the main loop after the Manager sends its MANAGER_REPORT.
-
-- **`QA_STATUS` message**: Display as a progress line to the user:
-  ```
-  [QA] Gate <gate>: <status> — <detail>
-  ```
-
-- **`MANAGER_REPORT` message**: Parse the report. Exit the message loop for this group.
-
-#### 5d. Shut down all group agents
-
-After the MANAGER_REPORT is received, shut down all agents spawned for this group so their context is released:
 ```
-SendMessage({ to: "manager", message: "shutdown" })
-SendMessage({ to: "quality", message: "shutdown" })
-SendMessage({ to: "impl-<domain-1>", message: "shutdown" })
-SendMessage({ to: "impl-<domain-2>", message: "shutdown" })
-...
+  [group pass] Group <N> — <label>
+    lint:            PASS | FAIL | SKIPPED
+    typecheck:       PASS | FAIL | SKIPPED
+    build:           PASS | FAIL | SKIPPED
+    test:            PASS | FAIL | SKIPPED
+    simplify:        PASS | FAIL
+    review:          PASS | FAIL
+    security-review: PASS | FAIL
+    security-scan:   PASS | FAIL
 ```
 
-### 6. Verify QA logs
+If `overall: FAIL`:
 
-After each MANAGER_REPORT, verify the Quality agent actually ran all gates:
+- Ask the user: "Full group QA failed (<failed gates>). Accept and continue, or stop?"
+
+- If stop, proceed to cleanup and halt
+
+  Verify QA logs:
 
 ```bash
 ls .claude/quality/$ARGUMENTS/group-<N>/gate-*.log 2>/dev/null | wc -l
 ```
 
-Expected: 8 log files. If fewer exist, warn the user:
+If fewer than 8, warn the user.
+
+Shut down quality-full:
+
 ```
-Warning: Only <N>/8 quality gate logs found at .claude/quality/$ARGUMENTS/group-<N>/
-Some gates may not have run. Review the logs before proceeding.
+SendMessage({ to: "quality-full", message: "shutdown" })
 ```
 
-Also check `report.md` exists in the same directory.
+Print group summary:
 
-### 7. Handle results
-
-Parse the MANAGER_REPORT:
-
-If `status: PASS`:
-1. Call `TaskUpdate(status: completed)` for the group's task entry. The `TaskCompleted` hook fires.
-2. Read `.claude/tasks/$ARGUMENTS.md` and flip `- [ ]` to `- [x]` for every task in this group.
-
-If `status: FAIL`:
-- The user already made their decision during ASK_USER (continue/stop)
-- If they chose `stop`, halt the loop
-
-Print group progress:
 ```
 ──────────────────────────
 ✓ Group <N> — <label> complete
+  Tasks: <N> committed
   QA logs: .claude/quality/$ARGUMENTS/group-<N>/
   Next: Group <M> — <label>   (or "All groups complete")
 ──────────────────────────
 ```
 
-If `--all` flag is set and more groups remain, loop back to step 5 for the next group.
+If `--all` flag is set and more groups remain, loop back to step 4 for the next group.
 
-### 8. Commit and cleanup
+### 5. Cleanup
 
-After all groups are processed:
+1. **Delete the team**:
 
-1. **Stage all changes**:
-   ```bash
-   git add -A
-   ```
-
-2. **Create a single commit** on the feature branch:
-   ```bash
-   git commit -m "feat: <task list title from the # heading>"
-   ```
-
-3. **Delete the team** (agents were already shut down per-group in step 5d):
    ```
    TeamDelete({ team_name: "work-$ARGUMENTS" })
    ```
 
-4. **Re-enable stop hooks** — remove the workflow flag file:
+2. **Re-enable stop hooks**:
+
    ```bash
    rm -f .claude/.workflow-running
    ```
 
-5. **Print final summary**:
+3. **Print final summary**:
 
 ```
 ══════════════════════════════════
-  Team Work Complete: $ARGUMENTS
+  Work Complete: $ARGUMENTS
 ══════════════════════════════════
 
 Feature branch: feat/$ARGUMENTS
 
 Groups completed this session:
-  ✓ Group 1 — <label>  (QA: PASS, logs: .claude/quality/$ARGUMENTS/group-1/)
-  ✓ Group 2 — <label>  (QA: PASS, logs: .claude/quality/$ARGUMENTS/group-2/)
+  ✓ Group 1 — <label>  (<N> tasks, QA: PASS)
+  ✓ Group 2 — <label>  (<N> tasks, QA: PASS)
 
 Previously complete (skipped):
   ✓ Group N — <label>
@@ -305,35 +349,60 @@ Previously complete (skipped):
 Still incomplete (if any):
   ✗ Group M — <label>  (<reason>)
 
-Domains:
-  impl-ui:     <N> tasks across <M> groups
-  impl-api:    <N> tasks across <M> groups
-
-Commit: <short sha> feat: <title>
-
 Next steps:
-  Review the feature branch and open a PR.
+  Review the feature branch and run /squash-pr $ARGUMENTS
 ══════════════════════════════════
 ```
 
 ---
 
+## git-expert COMMIT operation
+
+Add this operation to the git-expert agent. When it receives a COMMIT message:
+
+1. Stage all changes:
+
+   ```bash
+   git add -A
+   ```
+
+2. Commit with the provided message:
+
+   ```bash
+   git commit -m "<message>"
+   ```
+
+3. Mark the task complete in the task list file:
+   - Read `<taskListFile>`
+   - Find `- [ ] **<taskTitle>**` and replace with `- [x] **<taskTitle>**`
+   - Write back and verify
+
+4. Respond:
+
+   ```
+   GIT_COMMIT_COMPLETE
+   task: <taskTitle>
+   sha: <short sha>
+   GIT_COMMIT_COMPLETE_END
+   ```
+
+---
+
 ## Error handling
 
-- **Manager not responding**: If no message is received within a reasonable time, warn the user and suggest restarting
-- **Malformed MANAGER_REPORT**: Treat as FAIL, show raw output to user
-- **Missing QA logs**: Warn user even if MANAGER_REPORT says PASS — log files are the source of truth for gate execution
-- **Blocked groups** (in `--all` mode): if a group's dependencies are unmet after prior groups complete, report blockage and stop
+- **Implementer not responding**: Warn the user, offer to retry or skip the task
+- **Fast QA unresolvable**: User decides per task — skip, commit anyway, or stop
+- **Full group QA unresolvable**: User decides per group — accept or stop
+- **Blocked groups** (in `--all` mode): If a group's dependencies are unmet, report and stop
 
 ## Rules
 
-- Do NOT implement anything directly — delegate via the Manager to domain-implementer teammates
-- Do NOT run quality gates directly — delegate via the Manager to the Quality teammate
-- Do NOT skip QA log verification — always check that 8 gate log files exist after each group
-- Do NOT process groups in parallel — dependency order must be respected
-- Do NOT commit until all quality gates pass for completed groups
-- DO spawn all agents fresh per group and shut them down after — every agent is ephemeral to prevent context bloat
-- DO spawn all agents as teammates — the Manager never spawns agents
-- DO keep main agent context minimal — only QA_STATUS, ASK_USER, and MANAGER_REPORT flow back
-- DO verify QA logs independently after each MANAGER_REPORT
-- DO send group assignments only via the Manager — never directly to domain agents
+- Do NOT read spec files — pass spec paths to agents, let them read
+- Do NOT read source files — implementers own that
+- Do NOT implement anything directly — delegate to impl agents
+- Do NOT run quality gates directly — delegate to quality agents
+- Do NOT commit directly — delegate to git-expert
+- DO process tasks sequentially within a group
+- DO process groups sequentially in dependency order
+- DO shut down each agent immediately after it completes
+- DO keep main agent context minimal — only TASK_COMPLETE, FAST_QA_REPORT, QUALITY_GATE_REPORT, and GIT_COMMIT_COMPLETE flow back

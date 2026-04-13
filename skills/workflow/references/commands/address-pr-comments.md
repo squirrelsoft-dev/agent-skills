@@ -1,6 +1,6 @@
 # Address PR Comments
 
-Fetch, analyze, and address code review comments from a GitHub pull request.
+Fetch, analyze, and address code review comments from a GitHub pull request. Include any code review bots from bots like coderabbit, gemini-code-assist, claude, codex, etc.
 
 ## Security
 
