@@ -35,7 +35,7 @@ When `--issue` is detected:
 3. **Ask clarifying questions** — If the issue body or comments leave ambiguity about scope, acceptance criteria, or approach, ask the user for clarification before proceeding with the breakdown. Do not guess — ask.
 4. **Proceed with the breakdown** using the full issue context as the task description.
 
-When saving the task file in issue mode, use the format `.claude/tasks/issue-<number>.md` (e.g., `.claude/tasks/issue-7.md`).
+When saving the task file in issue mode, use the format `.workflow/tasks/issue-<number>.md` (e.g., `.workflow/tasks/issue-7.md`).
 
 ## Breakdown Steps
 
@@ -50,9 +50,9 @@ The agent should:
    - **Blocked by** — cannot start until specific other tasks complete (list them)
    - **Blocking** — other tasks cannot start until this one completes (list them)
 6. **Group for parallelism** — Organize tasks into groups that can be worked on simultaneously. Tasks in the same group have no dependencies on each other. Later groups depend on earlier groups.
-7. **Save** — Create the `.claude/tasks/` directory if needed, then write the breakdown to the appropriate file:
-   - Issue mode: `.claude/tasks/issue-<number>.md`
-   - Freeform mode: `.claude/tasks/<kebab-cased-arguments>.md`
+7. **Save** — Create the `.workflow/tasks/` directory if needed, then write the breakdown to the appropriate file:
+   - Issue mode: `.workflow/tasks/issue-<number>.md`
+   - Freeform mode: `.workflow/tasks/<kebab-cased-arguments>.md`
 
 ## Output Format
 

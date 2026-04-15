@@ -72,3 +72,13 @@ public/               # Static assets
 - tailwindcss (common but not required)
 - eslint-config-next (Next.js lint preset)
 - vitest or jest (testing)
+
+---
+
+## Stop-Hook Quality Gate
+
+Same scoped template as the TypeScript/Node stack: `oxlint` on changed
+JS/TS files, `oxfmt --check` on the working set, monorepo-aware typecheck
+via `turbo run typecheck` (or `tsc --noEmit` for single-package projects),
+and `vitest related` / `jest --findRelatedTests` for tests. Dependency
+audit runs only when `package.json` changes. See `typescript-node.md`.

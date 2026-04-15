@@ -30,6 +30,12 @@ setup() {
   export TEST_CMD="uv run pytest"
   export LINT_CMD="uv run ruff check ."
 
+  # Hook generator env (new scoped-gate contract)
+  export STACK="python"
+  export PKG_MANAGER="uv"
+  export TEST_RUNNER="pytest"
+  export TYPECHECKER="pyright"
+
   # Run all generators
   "$SCRIPTS_DIR/generate-settings.sh" > /dev/null 2>&1
   "$SCRIPTS_DIR/generate-rules.sh" > /dev/null 2>&1
@@ -90,8 +96,10 @@ teardown() {
 
 @test "e2e/python: stop-quality-gate.sh embeds uv commands" {
   # printf %q shell-quotes spaces, so check with regex
-  assert_file_matches "$PROJECT_DIR/.claude/hooks/stop-quality-gate.sh" 'LINT_CMD=.*uv.*ruff.*check'
-  assert_file_matches "$PROJECT_DIR/.claude/hooks/stop-quality-gate.sh" 'TEST_CMD=.*uv.*pytest'
+  # New scoped Python hook uses ruff/pyright directly (not via uv/package manager)
+  assert_file_contains "$PROJECT_DIR/.claude/hooks/stop-quality-gate.sh" 'STACK=python'
+  assert_file_contains "$PROJECT_DIR/.claude/hooks/stop-quality-gate.sh" 'ruff check'
+  assert_file_contains "$PROJECT_DIR/.claude/hooks/stop-quality-gate.sh" 'TYPECHECKER=pyright'
 }
 
 # --- CLAUDE.md ---

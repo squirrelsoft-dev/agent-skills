@@ -254,9 +254,11 @@ bash "${CLAUDE_SKILL_DIR}/scripts/generate-rules.sh"
 
 ### 4b — Hooks
 ```bash
-LINT_CMD="[from bf-repo.json]" \
-TEST_CMD="[from bf-repo.json]" \
+STACK="[from bf-repo.json]" \
+PKG_MANAGER="[from bf-repo.json]" \
 FORMATTER="[from bf-repo.json]" \
+TEST_RUNNER="[from bf-repo.json, e.g. vitest/jest/pytest/go-test]" \
+TYPECHECKER="[python only — ty/pyright/mypy, ask at interview if unset]" \
 AGENT_TEAMS="[from developer answer]" \
 bash "${CLAUDE_SKILL_DIR}/scripts/generate-hooks.sh"
 ```

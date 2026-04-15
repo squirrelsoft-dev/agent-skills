@@ -6,10 +6,13 @@ description: 'Implement a task list one task at a time using a tight implement �
 
 Implement a task list by processing each incomplete task sequentially: spawn an implementer, run fast quality gates on the diff, commit as a checkpoint, then move on. After all tasks in a group complete, run a full 8-gate quality pass. The main agent never reads spec files or source files — it only tracks state and orchestrates agents.
 
-**Input:** `$ARGUMENTS` — task list name, optionally followed by `--all`
+**Input:** `$ARGUMENTS` — task list name, optionally followed by `--all` and/or `--mode <permission-mode>`
 
 - `work <task-name>` — implement the next available group only
 - `work <task-name> --all` — implement every incomplete group in dependency order
+- `work <task-name> --mode auto` — spawn all teammates in `auto` permission mode (no permission prompts during agent execution)
+- `work <task-name> --mode bypassPermissions` — spawn all teammates in `bypassPermissions` mode (use with caution)
+- Flags can be combined: `work <task-name> --all --mode auto`
 
 ---
 
@@ -19,11 +22,13 @@ Implement a task list by processing each incomplete task sequentially: spawn an 
 
 Split `$ARGUMENTS` on whitespace. Extract:
 
-- `taskListName` — first token (e.g. `issue-3`)
+- `taskListName` — first non-flag token (e.g. `issue-3`)
 
 - `allFlag` — true if `--all` is present
 
-  Read `.claude/tasks/$ARGUMENTS.md`. If it doesn't exist, tell the user and stop.
+- `permissionMode` — value following `--mode` if present. Allowed values: `default`, `acceptEdits`, `auto`, `bypassPermissions`. If `--mode` is not provided, default to `acceptEdits`. If an invalid value is supplied, tell the user and stop.
+
+  Read `.workflow/tasks/$ARGUMENTS.md`. If it doesn't exist, tell the user and stop.
 
   Verify the file uses **combined group+domain format** — it should contain `## Group N —` headers with `### Domain:` subsections. If it contains only `## Domain:` headers without group wrappers, tell the user: "This task file uses the old domain-only format. Please re-run `/breakdown $ARGUMENTS` to generate the updated format." and stop.
 
@@ -33,11 +38,11 @@ Split `$ARGUMENTS` on whitespace. Extract:
 
 - Each domain within each group, with agent name and owned files
 
-- All tasks within each domain with their spec paths (`.claude/specs/$ARGUMENTS/<task-title-kebab>.md`)
+- All tasks within each domain with their spec paths (`.workflow/specs/$ARGUMENTS/<task-title-kebab>.md`)
 
 ### 2. Verify specs exist
 
-Check that `.claude/specs/$ARGUMENTS/` contains a spec file for every incomplete task (`- [ ]`). For each incomplete task, look for `.claude/specs/$ARGUMENTS/<task-title-kebab>.md`.
+Check that `.workflow/specs/$ARGUMENTS/` contains a spec file for every incomplete task (`- [ ]`). For each incomplete task, look for `.workflow/specs/$ARGUMENTS/<task-title-kebab>.md`.
 
 If any specs are missing, list them and suggest running `/spec $ARGUMENTS` first. Stop.
 
@@ -95,13 +100,13 @@ Agent({
   team_name: "work-$ARGUMENTS",
   name: "impl",
   agent: "domain-implementer",
-  mode: "acceptEdits",
+  mode: "<permissionMode>",
   prompt: `
     You are an implementer agent on branch feat/$ARGUMENTS.
 
     ## Your Task
     Title: <task title>
-    Spec: .claude/specs/$ARGUMENTS/<task-title-kebab>.md
+    Spec: .workflow/specs/$ARGUMENTS/<task-title-kebab>.md
     Domain: <domain-label>
     Files owned: <files owned for this domain>
 
@@ -146,13 +151,13 @@ Agent({
   team_name: "work-$ARGUMENTS",
   name: "quality",
   agent: "quality",
-  mode: "acceptEdits",
+  mode: "<permissionMode>",
   prompt: `
     You are the quality agent.
     Branch: feat/$ARGUMENTS
     Task: <task title>
-    Spec: .claude/specs/$ARGUMENTS/<task-title-kebab>.md
-    logDir: .claude/quality/$ARGUMENTS/task-<kebab-title>/
+    Spec: .workflow/specs/$ARGUMENTS/<task-title-kebab>.md
+    logDir: .workflow/quality/$ARGUMENTS/task-<kebab-title>/
 
     Run ONLY these gates on the uncommitted diff (git diff HEAD):
       Gate 1 — Lint (lintCmd: <lintCmd or empty>)
@@ -209,7 +214,7 @@ Agent({
   team_name: "work-$ARGUMENTS",
   name: "git-expert",
   agent: "git-expert",
-  mode: "acceptEdits",
+  mode: "<permissionMode>",
   prompt: `
     You are the git-expert for feat/$ARGUMENTS.
     Execute this single COMMIT operation, report GIT_COMMIT_COMPLETE, then stop.
@@ -218,7 +223,7 @@ Agent({
     Operation: COMMIT
     branch: feat/$ARGUMENTS
     message: feat(<domain>): <task title>
-    taskListFile: .claude/tasks/$ARGUMENTS.md
+    taskListFile: .workflow/tasks/$ARGUMENTS.md
     taskTitle: <task title>
   `
 })
@@ -249,12 +254,12 @@ Agent({
   team_name: "work-$ARGUMENTS",
   name: "quality-full",
   agent: "quality",
-  mode: "acceptEdits",
+  mode: "<permissionMode>",
   prompt: `
     You are the quality agent running a full group pass.
     Branch: feat/$ARGUMENTS
     Task: Group <N> — <label> (full pass)
-    logDir: .claude/quality/$ARGUMENTS/group-<N>/
+    logDir: .workflow/quality/$ARGUMENTS/group-<N>/
     lintCmd: <lintCmd or empty>
     typecheckCmd: <typecheckCmd or empty>
     buildCmd: <buildCmd or empty>
@@ -292,7 +297,7 @@ If `overall: FAIL`:
   Verify QA logs:
 
 ```bash
-ls .claude/quality/$ARGUMENTS/group-<N>/gate-*.log 2>/dev/null | wc -l
+ls .workflow/quality/$ARGUMENTS/group-<N>/gate-*.log 2>/dev/null | wc -l
 ```
 
 If fewer than 8, warn the user.
@@ -309,7 +314,7 @@ Print group summary:
 ──────────────────────────
 ✓ Group <N> — <label> complete
   Tasks: <N> committed
-  QA logs: .claude/quality/$ARGUMENTS/group-<N>/
+  QA logs: .workflow/quality/$ARGUMENTS/group-<N>/
   Next: Group <M> — <label>   (or "All groups complete")
 ──────────────────────────
 ```

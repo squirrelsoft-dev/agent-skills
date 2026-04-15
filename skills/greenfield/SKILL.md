@@ -107,7 +107,7 @@ For each question:
 3. Store the answer in the corresponding environment variable
 4. Move to the next question
 
-Ask all 7 questions (Q1–Q7) in order. Skip Q7's follow-up if the developer answers "no" to CI/CD. **Do not proceed to Step 2c until all questions are answered.**
+Ask all 7 questions (Q1–Q7) in order. Ask **Q6b only if `STACK == python`** — skip it for every other stack and leave `TYPECHECKER` empty. Skip Q7's follow-up if the developer answers "no" to CI/CD. **Do not proceed to Step 2c until all questions are answered.**
 
 ---
 
@@ -117,7 +117,7 @@ After the interview (or after loading previous config for an update), save the c
 
 ```bash
 SKILL_NAME="greenfield" \
-CONFIG_JSON='{"PROJECT_NAME":"[val]","PROJECT_DESCRIPTION":"[val]","STACK":"[val]","FRAMEWORK":"[val]","LANG":"[val]","PKG_MANAGER":"[val]","FORMATTER":"[val]","TEST_RUNNER":"[val]","HAS_TYPESCRIPT":"[val]","GIT_SETUP":"[val]","AGENT_TEAMS":"[val]","COMMIT_STYLE":"[val]","CI_CD":"[val]","CI_WORKFLOWS":"[val]"}' \
+CONFIG_JSON='{"PROJECT_NAME":"[val]","PROJECT_DESCRIPTION":"[val]","STACK":"[val]","FRAMEWORK":"[val]","LANG":"[val]","PKG_MANAGER":"[val]","FORMATTER":"[val]","TEST_RUNNER":"[val]","TYPECHECKER":"[val or empty]","HAS_TYPESCRIPT":"[val]","GIT_SETUP":"[val]","AGENT_TEAMS":"[val]","COMMIT_STYLE":"[val]","CI_CD":"[val]","CI_WORKFLOWS":"[val]"}' \
 bash "${CLAUDE_SKILL_DIR}/scripts/save-config.sh"
 ```
 
@@ -215,9 +215,11 @@ bash "${CLAUDE_SKILL_DIR}/scripts/generate-rules.sh"
 
 ```bash
 PROJECT_DIR="$PWD" \
-LINT_CMD="[from stack reference]" \
-TEST_CMD="[from stack reference]" \
+STACK="[confirmed stack from Q3]" \
+PKG_MANAGER="[from detection]" \
 FORMATTER="[from detection]" \
+TEST_RUNNER="[from detection, e.g. vitest/jest/pytest/go-test]" \
+TYPECHECKER="[from Q6b, python only — otherwise leave empty]" \
 bash "${CLAUDE_SKILL_DIR}/scripts/generate-hooks.sh"
 ```
 

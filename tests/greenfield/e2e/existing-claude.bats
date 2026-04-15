@@ -14,6 +14,8 @@ setup() {
   export LINT_CMD="npm run lint"
   export TEST_CMD="npm test"
   export FORMATTER="prettier"
+  export TEST_RUNNER="vitest"
+  export TYPECHECKER=""
   export PROJECT_NAME="Existing Project"
   export PROJECT_DESCRIPTION="Project with existing .claude dir"
   export INSTALL_CMD="npm install"

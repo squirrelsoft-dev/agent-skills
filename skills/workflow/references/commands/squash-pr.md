@@ -10,7 +10,7 @@ Squash the feature branch down to a single clean commit and open a pull request.
 
 - **Subagent mode** (`feat/$ARGUMENTS-group-*` branches) — merge all group branches first, then squash
 
-  **Input:** `$ARGUMENTS` — task list name (e.g. `issue-3`). Maps to `.claude/tasks/$ARGUMENTS.md`. Required.
+  **Input:** `$ARGUMENTS` — task list name (e.g. `issue-3`). Maps to `.workflow/tasks/$ARGUMENTS.md`. Required.
 
 ---
 
@@ -18,7 +18,7 @@ Squash the feature branch down to a single clean commit and open a pull request.
 
 ### 1. Read the task list
 
-Read `.claude/tasks/$ARGUMENTS.md`. If it doesn't exist, tell the user and stop.
+Read `.workflow/tasks/$ARGUMENTS.md`. If it doesn't exist, tell the user and stop.
 
 Extract:
 
@@ -280,7 +280,7 @@ git branch -d feat/$ARGUMENTS-merge
 ══════════════════════════════════
 
   Mode:          team | subagent
-  Task list:     .claude/tasks/$ARGUMENTS.md
+  Task list:     .workflow/tasks/$ARGUMENTS.md
   Title:         <raw title>
   Source branch: <sourceBranch>
   Target branch: <targetBranch>

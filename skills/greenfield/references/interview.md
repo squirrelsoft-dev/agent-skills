@@ -58,6 +58,17 @@ It defines the questions to ask the developer before generating any artifacts.
 - **Env var:** `COMMIT_STYLE`
 - **Notes:** Written into CLAUDE.md conventions section.
 
+### Q6b — Python type checker (Python stacks only)
+- **When to ask:** Only if `STACK == python`. Skip for all other stacks.
+- **Ask:** "Which Python type checker should the stop hook run on changed files?"
+- **Type:** choice (required for Python)
+- **Options:**
+  - `pyright` — Stable, fast, widely used (**Recommended**)
+  - `ty` — Astral's Rust-based type checker, fastest available (very new as of 2026)
+  - `mypy` — Most mature, slowest
+- **Env var:** `TYPECHECKER`
+- **Notes:** Passed to `generate-hooks.sh` when emitting the Python stack body. The hook only invokes the chosen tool if it's installed (`command -v`), so picking `ty` on a machine without `ty` installed will silently skip typecheck until the tool is available. For non-Python stacks, set `TYPECHECKER=""` in the Save Configuration step.
+
 ### Q7 — CI/CD
 - **Ask:** "Scaffold GitHub Actions CI/CD workflows?"
 - **Type:** yes / no (required)
@@ -82,6 +93,7 @@ It defines the questions to ask the developer before generating any artifacts.
 | `GIT_SETUP` | Q4 | SKILL.md Step 6 |
 | `AGENT_TEAMS` | Q5 | generate-settings.sh |
 | `COMMIT_STYLE` | Q6 | generate-claude-md.sh |
+| `TYPECHECKER` | Q6b (python only) | generate-hooks.sh |
 | `CI_CD` | Q7 | SKILL.md Step 7 |
 | `CI_WORKFLOWS` | Q7 follow-up | SKILL.md Step 7 |
 

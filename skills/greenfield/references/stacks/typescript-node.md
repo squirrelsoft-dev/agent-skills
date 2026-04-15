@@ -79,3 +79,25 @@ tests/                # Test files
 - vitest or jest (testing)
 - tsup (optional — bundler for libraries)
 - express / fastify / hono (if FRAMEWORK=node-api)
+
+---
+
+## Stop-Hook Quality Gate
+
+The scoped quality gate emitted by `generate-hooks.sh` runs these tools
+**only on files changed on the current branch** (never the whole repo):
+
+| Stage | Tool | Scope |
+|---|---|---|
+| Lint | `oxlint` | Changed JS/TS files |
+| Format check | `oxfmt --check` | Working-set JS/TS only (pre-existing branch drift is tolerated) |
+| Typecheck (monorepo) | `turbo run typecheck --filter=./<pkg>` | Packages containing changed files |
+| Typecheck (single pkg) | `tsc --noEmit` | Whole package (tsc has no file-level mode) |
+| Tests (monorepo) | `vitest related` / `jest --findRelatedTests` | Per package, bucketed by changed files |
+| Tests (single pkg) | `vitest related` / `jest --findRelatedTests` | Changed files only |
+| Dependency audit | `$PM audit --audit-level=high` | Only when `package.json` is in the change set |
+
+The hook uses `oxlint` + `oxfmt` regardless of whether the project also
+uses eslint/prettier — they're chosen for speed on the stop-hook path.
+Missing tools are skipped via `command -v` so the hook never breaks on
+a fresh clone.

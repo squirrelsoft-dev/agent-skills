@@ -87,3 +87,27 @@ tests/
 - mypy (optional — static type checking)
 - uvicorn (FastAPI/Starlette ASGI server)
 - gunicorn (production WSGI/ASGI server)
+
+---
+
+## Stop-Hook Quality Gate
+
+The scoped quality gate emitted by `generate-hooks.sh` runs these tools
+**only on files changed on the current branch**:
+
+| Stage | Tool | Scope |
+|---|---|---|
+| Lint | `ruff check` | Changed `.py` files |
+| Format check | `ruff format --check` | Working-set `.py` only |
+| Typecheck | `ty` / `pyright` / `mypy` (chosen at interview) | Unique parent dirs of changed `.py` files |
+| Tests | `pytest --picked --mode=branch` | Only if `pytest-picked` plugin is installed |
+| Dependency audit | `pip-audit` | Only when `pyproject.toml` or `requirements*.txt` is in the change set |
+
+The type checker is chosen during the greenfield interview (Q6b) and
+saved to `TYPECHECKER` in `skill-config.json`. Defaults to `pyright`.
+Options: `ty` (Astral, Rust-based, fastest — newest), `pyright` (fast,
+stable — recommended default), `mypy` (mature, slowest).
+
+`pytest-picked` is optional — if not installed, the test stage is
+skipped with a stderr note rather than running the full suite, since
+pytest has no reliable native "related tests" mode.

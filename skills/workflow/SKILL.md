@@ -173,16 +173,19 @@ bash scripts/install-triage-skill.sh
 
 ---
 
-## Step 5 — Patch Quality Gate (if tools available)
+## Step 5 — Verify Quality Gate
 
-If gitleaks or semgrep are installed (or were just installed):
+Confirm the installed `.claude/hooks/stop-quality-gate.sh` is the scoped,
+stack-aware template (gitleaks and semgrep are now built into the hook's
+shared security block and run only on changed files — no patching needed):
 
 ```bash
-GITLEAKS="[yes|no]" \
-SEMGREP="[yes|no]" \
-STACK="[detected from CLAUDE.md or package.json]" \
 bash scripts/patch-quality-gate.sh
 ```
+
+The script is a no-op when the hook is already the scoped template. If it
+detects an older unscoped hook, it prints instructions to re-run
+greenfield/brownfield to regenerate.
 
 ---
 

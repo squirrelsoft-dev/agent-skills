@@ -30,6 +30,12 @@ setup() {
   export TEST_CMD="pnpm vitest run"
   export LINT_CMD="pnpm lint"
 
+  # Hook generator env (new scoped-gate contract)
+  export STACK="nextjs"
+  export PKG_MANAGER="pnpm"
+  export TEST_RUNNER="vitest"
+  export TYPECHECKER=""
+
   # Run all generators
   "$SCRIPTS_DIR/generate-settings.sh" > /dev/null 2>&1
   "$SCRIPTS_DIR/generate-rules.sh" > /dev/null 2>&1
@@ -118,8 +124,10 @@ teardown() {
 
 @test "e2e/nextjs: stop-quality-gate.sh embeds pnpm commands" {
   # printf %q shell-quotes spaces, so check with regex
-  assert_file_matches "$PROJECT_DIR/.claude/hooks/stop-quality-gate.sh" 'LINT_CMD=.*pnpm.*lint'
-  assert_file_matches "$PROJECT_DIR/.claude/hooks/stop-quality-gate.sh" 'TEST_CMD=.*pnpm.*vitest.*run'
+  # New scoped hook: PM constant is set at top and oxlint/vitest are invoked via it.
+  assert_file_contains "$PROJECT_DIR/.claude/hooks/stop-quality-gate.sh" 'PM=pnpm'
+  assert_file_contains "$PROJECT_DIR/.claude/hooks/stop-quality-gate.sh" 'oxlint'
+  assert_file_contains "$PROJECT_DIR/.claude/hooks/stop-quality-gate.sh" 'vitest related'
 }
 
 @test "e2e/nextjs: guard.sh blocks destructive commands" {
@@ -152,6 +160,5 @@ teardown() {
   assert_file_contains "$PROJECT_DIR/.gitignore" '.claude/settings.local.json'
   assert_file_contains "$PROJECT_DIR/.gitignore" '.claude/logs/'
   assert_file_contains "$PROJECT_DIR/.gitignore" '.claude/scratch/'
-  assert_file_contains "$PROJECT_DIR/.gitignore" '.claude/tasks/'
-  assert_file_contains "$PROJECT_DIR/.gitignore" '.claude/specs/'
+  assert_file_contains "$PROJECT_DIR/.gitignore" '.workflow/'
 }

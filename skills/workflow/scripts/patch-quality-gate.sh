@@ -1,10 +1,20 @@
 #!/bin/bash
 set -e
 # patch-quality-gate.sh
-# Adds quality tool scan blocks to .claude/hooks/stop-quality-gate.sh
-# GITLEAKS: "yes" or "no"
-# SEMGREP: "yes" or "no"
-# STACK: detected stack (for npm audit block)
+#
+# The scoped quality gate emitted by greenfield/brownfield already runs
+# gitleaks (per changed file) and semgrep (on CHANGED[]) in its shared
+# security block, so workflow no longer needs to inject those.
+#
+# This script's only job now is to detect whether the installed hook is the
+# new scoped template (marker: "# Scoped quality gate") and report status.
+# If the hook is an older pre-rewrite version, it instructs the user to
+# re-run greenfield or brownfield to regenerate it. Workflow does not try
+# to rewrite the hook in place — that would require re-detecting stack,
+# package manager, and test runner, duplicating logic the generators own.
+#
+# Env vars are accepted but ignored (kept for backward compatibility with
+# existing SKILL.md invocations): GITLEAKS, SEMGREP, STACK.
 
 GATE=".claude/hooks/stop-quality-gate.sh"
 
@@ -14,69 +24,30 @@ if [ ! -f "$GATE" ]; then
   exit 0
 fi
 
-GITLEAKS="${GITLEAKS:-no}"
-SEMGREP="${SEMGREP:-no}"
-STACK="${STACK:-unknown}"
-PATCHED=()
-
-# insert_before_lint: insert a block of text before the "# Lint" line in $GATE
-# Works on both macOS and Linux (avoids sed -i portability issues)
-insert_before_lint() {
-  local block="$1"
-  local block_file result_file
-  block_file=$(mktemp)
-  result_file=$(mktemp)
-  printf '%s\n' "$block" > "$block_file"
-  awk '/^# Lint/ { while ((getline line < "'"$block_file"'") > 0) print line; print "" } { print }' "$GATE" > "$result_file"
-  mv "$result_file" "$GATE"
-  chmod +x "$GATE"
-  rm -f "$block_file"
-}
-
-if [ "$GITLEAKS" = "yes" ] && ! grep -q "gitleaks" "$GATE"; then
-  read -r -d '' BLOCK << 'GITLEAKS_EOF' || true
-# Secret detection (gitleaks)
-if command -v gitleaks &>/dev/null; then
-  if output=$(gitleaks detect --no-git --source=. 2>&1); then
-    : # exit 0 = no leaks
-  else
-    details=$(echo "$output" | grep -iE "Secret|Finding|RuleID|Match" || true)
-    [[ -n "$details" ]] && ERRORS+="\n## Secrets Detected (gitleaks)\n\`\`\`\n${details}\n\`\`\`\n"
-  fi
-fi
-GITLEAKS_EOF
-  insert_before_lint "$BLOCK"
-  PATCHED+=("gitleaks")
-  echo "Added gitleaks block" >&2
+if grep -q "# Scoped quality gate" "$GATE"; then
+  echo "stop-quality-gate.sh is already the scoped template — no patch needed" >&2
+  echo '{"status":"ok","patched":"none","reason":"already-scoped"}'
+  exit 0
 fi
 
-if [ "$SEMGREP" = "yes" ] && ! grep -q "semgrep" "$GATE"; then
-  read -r -d '' BLOCK << 'SEMGREP_EOF' || true
-# SAST scan (semgrep)
-if command -v semgrep &>/dev/null; then
-  if output=$(semgrep --config=auto --quiet --json 2>/dev/null | jq -r ".results[] | \"\(.path):\(.start.line) \(.check_id)\"" 2>/dev/null); then
-    [[ -n "$output" ]] && ERRORS+="\n## Security Issues\n\`\`\`\n${output}\n\`\`\`\n"
-  fi
-fi
-SEMGREP_EOF
-  insert_before_lint "$BLOCK"
-  PATCHED+=("semgrep")
-  echo "Added semgrep block" >&2
-fi
+# Older unscoped hook detected. Workflow doesn't have enough context to
+# regenerate it safely — tell the user to re-run greenfield/brownfield.
+cat >&2 <<'MSG'
 
-if echo "$STACK" | grep -qE "nextjs|react|typescript-node" && ! grep -q "npm audit" "$GATE"; then
-  read -r -d '' BLOCK << 'NPM_EOF' || true
-# Dependency audit (npm)
-if [[ -f "$CLAUDE_PROJECT_DIR/package.json" ]] && command -v npm &>/dev/null; then
-  if output=$(npm audit --audit-level=high 2>&1) && echo "$output" | grep -q "high\|critical"; then
-    ERRORS+="\n## Vulnerable Dependencies\n\`\`\`\n$(echo "$output" | tail -15)\n\`\`\`\n"
-  fi
-fi
-NPM_EOF
-  insert_before_lint "$BLOCK"
-  PATCHED+=("npm-audit")
-  echo "Added npm audit block" >&2
-fi
+⚠️  Your .claude/hooks/stop-quality-gate.sh is an older, unscoped version.
+    Workflow no longer patches it in place. To upgrade to the scoped,
+    stack-aware template that only runs tools against changed files:
 
-PATCHED_STR=$(IFS=','; echo "${PATCHED[*]}")
-echo "{\"status\":\"ok\",\"patched\":\"$PATCHED_STR\"}"
+      1. Re-run greenfield (`/greenfield`) or brownfield (`/brownfield`).
+         Both detect existing configs and offer an "Update" path that
+         regenerates hooks without re-asking every interview question.
+
+      2. Then re-run workflow — this script will confirm the new hook.
+
+    The existing hook still works; upgrading is optional but recommended
+    for speed on larger codebases.
+
+MSG
+
+echo '{"status":"skipped","patched":"none","reason":"legacy-gate-needs-regeneration"}'
+exit 0

@@ -35,7 +35,7 @@ When `--issue` is detected:
 3. **Ask clarifying questions** — If the issue body or comments leave ambiguity about scope, acceptance criteria, or approach, ask the user for clarification before proceeding with the breakdown. Do not guess — ask.
 4. **Proceed with the breakdown** using the full issue context as the task description.
 
-When saving the task file in issue mode, use the format `.claude/tasks/issue-<number>.md` (e.g., `.claude/tasks/issue-7.md`).
+When saving the task file in issue mode, use the format `.workflow/tasks/issue-<number>.md` (e.g., `.workflow/tasks/issue-7.md`).
 
 ## Breakdown Steps
 
@@ -60,9 +60,9 @@ The agent should:
    - Each group should represent a logical stage of the feature (e.g., "Foundation", "Core Logic", "Integration", "Polish").
    - Within each group, organize tasks by domain.
 9. **Identify shared files** — Files that appear in multiple domains must be listed in a Shared Files table with an explicit resolution strategy (who writes first, what contract to follow).
-10. **Save** — Create the `.claude/tasks/` directory if needed, then write the breakdown to the appropriate file:
-    - Issue mode: `.claude/tasks/issue-<number>.md`
-    - Freeform mode: `.claude/tasks/<kebab-cased-arguments>.md`
+10. **Save** — Create the `.workflow/tasks/` directory if needed, then write the breakdown to the appropriate file:
+    - Issue mode: `.workflow/tasks/issue-<number>.md`
+    - Freeform mode: `.workflow/tasks/<kebab-cased-arguments>.md`
 
 ## Output Format
 

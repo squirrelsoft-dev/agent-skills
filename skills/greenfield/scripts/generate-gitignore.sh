@@ -18,8 +18,7 @@ ENTRIES=(
   ".claude/settings.local.json"
   ".claude/logs/"
   ".claude/scratch/"
-  ".claude/tasks/"
-  ".claude/specs/"
+  ".workflow/"
 )
 
 # Create .gitignore if it doesn't exist

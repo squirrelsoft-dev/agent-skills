@@ -6,13 +6,13 @@ description: 'Generate detailed specs from a domain-based task breakdown using a
 
 Generate detailed specification files from a domain-based task breakdown using a coordinated agent team. Each teammate generates specs for their domain and can coordinate on cross-domain interfaces.
 
-**Input**: `$ARGUMENTS` is the name of a task file (maps to `.claude/tasks/$ARGUMENTS.md`).
+**Input**: `$ARGUMENTS` is the name of a task file (maps to `.workflow/tasks/$ARGUMENTS.md`).
 
 ## Workflow
 
 ### 1. Read and validate
 
-Read the task list file from `.claude/tasks/$ARGUMENTS.md`. If it doesn't exist, tell the user and suggest running `/breakdown $ARGUMENTS` first.
+Read the task list file from `.workflow/tasks/$ARGUMENTS.md`. If it doesn't exist, tell the user and suggest running `/breakdown $ARGUMENTS` first.
 
 Verify the file uses **combined group+domain format** — it should contain `## Group N —` headers with `### Domain:` subsections. If it contains only `## Domain:` headers without group wrappers, tell the user: "This task file uses the old domain-only format. Please re-run `/breakdown $ARGUMENTS` to generate the updated format." and stop. If it contains `## Group N —` headers without `### Domain:` subsections, tell the user: "This task file uses group format without domains. Use `/spec` instead." and stop.
 
@@ -24,7 +24,7 @@ Parse the file to extract:
 
 ### 2. Create output directory
 
-Create `.claude/specs/$ARGUMENTS/` if it doesn't exist.
+Create `.workflow/specs/$ARGUMENTS/` if it doesn't exist.
 
 ### 3. Create the team
 
@@ -88,7 +88,7 @@ For each task in your domain:
 
 1. Read the files listed in the task to understand existing code
 2. If the task involves an unfamiliar library or pattern, note it in the spec and suggest the user run `/find-skills <topic>` to check for relevant community skills before implementation.
-3. Write a spec file to `.claude/specs/$ARGUMENTS/<task-title-kebab>.md` using the format below
+3. Write a spec file to `.workflow/specs/$ARGUMENTS/<task-title-kebab>.md` using the format below
 
 After writing all specs, mark your task as completed via TaskUpdate and send a message to the orchestrator confirming completion.
 
@@ -96,7 +96,7 @@ After writing all specs, mark your task as completed via TaskUpdate and send a m
 
 # Spec: <Task Title>
 
-> From: .claude/tasks/$ARGUMENTS.md
+> From: .workflow/tasks/$ARGUMENTS.md
 > Domain: <domain-label>
 
 ## Objective
@@ -144,7 +144,7 @@ Wait for all teammates to complete their tasks. Monitor via messages received fr
 
 After all teammates finish:
 
-1. Read all generated spec files from `.claude/specs/$ARGUMENTS/`
+1. Read all generated spec files from `.workflow/specs/$ARGUMENTS/`
 2. Check for consistency at coordination points:
    - Do specs that reference the same shared file agree on the interface contract?
    - Do cross-domain `Coordinates with:` references align on both sides?

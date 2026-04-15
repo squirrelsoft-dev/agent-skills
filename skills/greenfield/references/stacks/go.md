@@ -68,3 +68,23 @@ go.sum
 - golangci-lint (optional — comprehensive linter aggregator)
 - air (optional — hot reload for development)
 - testify (optional — assertion helpers for tests)
+
+---
+
+## Stop-Hook Quality Gate
+
+The scoped quality gate emitted by `generate-hooks.sh` runs these tools
+**only on the packages containing changed `.go` files** (Go lints, vets,
+and tests at package granularity — there's no faster unit in the Go
+toolchain):
+
+| Stage | Tool | Scope |
+|---|---|---|
+| Format check | `gofmt -l` | Working-set `.go` files only |
+| Lint | `golangci-lint run ./<pkg>` | Packages of changed files |
+| Vet | `go vet ./<pkg>` | Packages of changed files |
+| Tests | `go test ./<pkg>` | Packages of changed files |
+| Dependency audit | `govulncheck ./...` | Only when `go.mod` or `go.sum` is in the change set |
+
+Missing tools are skipped via `command -v`. `golangci-lint` and
+`govulncheck` are optional — install them to enable those stages.

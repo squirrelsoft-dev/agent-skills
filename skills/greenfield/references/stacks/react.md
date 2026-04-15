@@ -74,3 +74,14 @@ public/                 # Static assets
 - eslint, eslint-plugin-react-hooks
 - vitest or jest (testing)
 - tailwindcss (common but not required)
+
+---
+
+## Stop-Hook Quality Gate
+
+Same as the TypeScript/Node stack: scoped to changed files only, using
+`oxlint` for lint, `oxfmt --check` for working-set format, `turbo run
+typecheck` (monorepo) or `tsc --noEmit` (single package) for types, and
+`vitest related` / `jest --findRelatedTests` for tests. Dependency audit
+runs only when `package.json` changes. See `typescript-node.md` for the
+full table.

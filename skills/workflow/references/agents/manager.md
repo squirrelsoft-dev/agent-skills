@@ -16,8 +16,8 @@ You are spawned as a **named teammate** and receive work via `SendMessage`.
 You will be given these in your initial prompt:
 - `mode` — `subagents` or `teams`
 - `taskListName` — task list name (e.g. `issue-3`)
-- `taskListFile` — path to `.claude/tasks/<taskListName>.md`
-- `specDir` — path to `.claude/specs/<taskListName>/`
+- `taskListFile` — path to `.workflow/tasks/<taskListName>.md`
+- `specDir` — path to `.workflow/specs/<taskListName>/`
 - `lintCmd`, `typecheckCmd`, `buildCmd`, `testCmd` — optional quality gate commands
 
 **Additional inputs for subagents mode:**

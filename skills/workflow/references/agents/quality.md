@@ -19,7 +19,7 @@ You will be given:
 - `typecheckCmd` — project typecheck command (optional — if provided, run Gate 2)
 - `buildCmd` — project build command (optional — if provided, run Gate 3)
 - `testCmd` — project test command (optional — if provided, run Gate 4)
-- `logDir` — directory to write gate log files (optional — e.g. `.claude/quality/issue-3/group-1/`)
+- `logDir` — directory to write gate log files (optional — e.g. `.workflow/quality/issue-3/group-1/`)
 - `notifyTo` — teammate name to send progress notifications to (optional — e.g. `"manager"`)
 
 ## Process

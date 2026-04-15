@@ -6,10 +6,13 @@ description: 'Implement the next task group (or all groups) from a task breakdow
 
 Orchestrate implementation of a task breakdown by spawning a team of agents and letting the Manager coordinate them. The main agent spawns all teammates, sends group assignments, handles user decisions, and verifies QA logs. The Manager coordinates Git Expert, Implementers, and Quality via messages — it never spawns agents.
 
-**Input:** `$ARGUMENTS` — task list name, optionally followed by `--all`
+**Input:** `$ARGUMENTS` — task list name, optionally followed by `--all` and/or `--mode <permission-mode>`
 
 - `work <task-name>` — implement the next available group only
 - `work <task-name> --all` — enqueue and implement every incomplete group in dependency order
+- `work <task-name> --mode auto` — spawn all teammates in `auto` permission mode (no permission prompts during agent execution)
+- `work <task-name> --mode bypassPermissions` — spawn all teammates in `bypassPermissions` mode (use with caution)
+- Flags can be combined: `work <task-name> --all --mode auto`
 
 ---
 
@@ -18,10 +21,11 @@ Orchestrate implementation of a task breakdown by spawning a team of agents and 
 ### 1. Parse arguments
 
 Split `$ARGUMENTS` on whitespace. Extract:
-- `taskListName` — first token (e.g. `issue-3`)
+- `taskListName` — first non-flag token (e.g. `issue-3`)
 - `allFlag` — true if `--all` is present
+- `permissionMode` — value following `--mode` if present. Allowed values: `default`, `acceptEdits`, `auto`, `bypassPermissions`. If `--mode` is not provided, default to `acceptEdits`. If an invalid value is supplied, tell the user and stop.
 
-Read `.claude/tasks/<taskListName>.md`. If it doesn't exist, tell the user and stop.
+Read `.workflow/tasks/<taskListName>.md`. If it doesn't exist, tell the user and stop.
 
 ### 2. Check file format
 
@@ -41,7 +45,7 @@ If all groups are already complete, tell the user and stop.
 
 ### 4. Verify specs exist
 
-Before doing anything, check that `.claude/specs/<taskListName>/` contains a spec file for every incomplete task across all groups you intend to process. For each incomplete task, look for `.claude/specs/<taskListName>/<task-title-kebab>.md`.
+Before doing anything, check that `.workflow/specs/<taskListName>/` contains a spec file for every incomplete task across all groups you intend to process. For each incomplete task, look for `.workflow/specs/<taskListName>/<task-title-kebab>.md`.
 
 If any specs are missing, list them and suggest running `/spec <taskListName>` first. Stop.
 
@@ -93,11 +97,12 @@ Agent({
   team_name: "work-<taskListName>",
   name: "manager",
   agent: "manager",
+  mode: "<permissionMode>",
   prompt: `
     mode: subagents
     taskListName: <taskListName>
-    taskListFile: .claude/tasks/<taskListName>.md
-    specDir: .claude/specs/<taskListName>/
+    taskListFile: .workflow/tasks/<taskListName>.md
+    specDir: .workflow/specs/<taskListName>/
     lintCmd: <project lint command or empty>
     typecheckCmd: <project typecheck command or empty>
     buildCmd: <project build command or empty>
@@ -114,6 +119,7 @@ Agent({
   team_name: "work-<taskListName>",
   name: "git-expert",
   agent: "git-expert",
+  mode: "<permissionMode>",
   prompt: `
     You are the Git Expert. Wait for operation messages (SETUP, MERGE, VERIFY)
     from the manager. Execute each operation and send the structured response
@@ -128,6 +134,7 @@ Agent({
   team_name: "work-<taskListName>",
   name: "quality",
   agent: "quality",
+  mode: "<permissionMode>",
   prompt: `
     You are the Quality agent. Wait for RUN_GATES messages from the manager.
     For each request, run all 8 quality gates. Send QA_PROGRESS notifications
@@ -143,6 +150,7 @@ Agent({
   team_name: "work-<taskListName>",
   name: "impl-<agentNumber>",
   agent: "implementer",
+  mode: "<permissionMode>",
   prompt: `
     You are an implementer agent. Wait for a TASK_ASSIGNMENT message
     from the manager. Implement the spec, commit your changes, and
@@ -165,11 +173,11 @@ SendMessage({
     tasks:
       - agentNumber: 1
         title: <task title>
-        spec: .claude/specs/<taskListName>/<task-title-kebab>.md
+        spec: .workflow/specs/<taskListName>/<task-title-kebab>.md
       - agentNumber: 2
         title: <task title>
-        spec: .claude/specs/<taskListName>/<task-title-kebab>.md
-    logDir: .claude/quality/<taskListName>/group-<N>/
+        spec: .workflow/specs/<taskListName>/<task-title-kebab>.md
+    logDir: .workflow/quality/<taskListName>/group-<N>/
     teammates: [git-expert, quality, impl-1, impl-2, ...]
     START_GROUP_END
   `
@@ -217,12 +225,12 @@ SendMessage({ to: "impl-2", message: "shutdown" })
 After each MANAGER_REPORT, verify the Quality agent actually ran all gates:
 
 ```bash
-ls .claude/quality/<taskListName>/group-<N>/gate-*.log 2>/dev/null | wc -l
+ls .workflow/quality/<taskListName>/group-<N>/gate-*.log 2>/dev/null | wc -l
 ```
 
 Expected: 8 log files. If fewer exist, warn the user:
 ```
-Warning: Only <N>/8 quality gate logs found at .claude/quality/<taskListName>/group-<N>/
+Warning: Only <N>/8 quality gate logs found at .workflow/quality/<taskListName>/group-<N>/
 Some gates may not have run. Review the logs before proceeding.
 ```
 
@@ -234,7 +242,7 @@ Parse the MANAGER_REPORT:
 
 If `status: PASS`:
 1. Call `TaskUpdate` to mark the group's task entry as complete
-2. Read `.claude/tasks/<taskListName>.md` and flip `- [ ]` to `- [x]` for every task in this group
+2. Read `.workflow/tasks/<taskListName>.md` and flip `- [ ]` to `- [x]` for every task in this group
 
 If `status: FAIL`:
 - The user already made their decision during ASK_USER (continue/stop/merge-anyway)
@@ -246,7 +254,7 @@ If `status: FAIL`:
 ──────────────────────────
 ✓ Group <N> — <label> complete. Feature branch: feat/<taskGroupName>
   Tasks completed: <N>  |  Failed: <N>
-  QA logs: .claude/quality/<taskListName>/group-<N>/
+  QA logs: .workflow/quality/<taskListName>/group-<N>/
   Next: Group <M> — <label>   (or "All groups complete")
 ──────────────────────────
 ```
@@ -275,8 +283,8 @@ After all groups are processed (or the user stops):
 ══════════════════════════════════
 
 Groups completed this session:
-  ✓ Group 1 — <label>  →  feat/<taskGroupName>  (QA: PASS, logs: .claude/quality/...)
-  ✓ Group 2 — <label>  →  feat/<taskGroupName>  (QA: PASS, logs: .claude/quality/...)
+  ✓ Group 1 — <label>  →  feat/<taskGroupName>  (QA: PASS, logs: .workflow/quality/...)
+  ✓ Group 2 — <label>  →  feat/<taskGroupName>  (QA: PASS, logs: .workflow/quality/...)
 
 Previously complete (skipped):
   ✓ Group N — <label>

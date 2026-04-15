@@ -28,6 +28,12 @@ setup() {
   export BUILD_CMD="echo 'no build configured'"
   export TEST_CMD="echo 'no tests configured'"
   export LINT_CMD="echo 'no lint configured'"
+
+  # Hook generator env (new scoped-gate contract)
+  export STACK="unknown"
+  export PKG_MANAGER="unknown"
+  export TEST_RUNNER=""
+  export TYPECHECKER=""
 }
 
 teardown() {
