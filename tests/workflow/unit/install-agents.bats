@@ -38,6 +38,17 @@ teardown() { common_teardown; }
   [ ! -f "$TEST_TEMP_DIR/.claude/agents/implementer.md" ]
 }
 
+@test "install-agents: loop mode installs planner, executor, evaluator" {
+  cd "$TEST_TEMP_DIR"
+  ORCHESTRATION=loop run "$SCRIPTS_DIR/install-agents.sh"
+  [ "$status" -eq 0 ]
+  assert_file_exists "$TEST_TEMP_DIR/.claude/agents/planner.md"
+  assert_file_exists "$TEST_TEMP_DIR/.claude/agents/executor.md"
+  assert_file_exists "$TEST_TEMP_DIR/.claude/agents/evaluator.md"
+  [ ! -f "$TEST_TEMP_DIR/.claude/agents/implementer.md" ]
+  [ ! -f "$TEST_TEMP_DIR/.claude/agents/domain-implementer.md" ]
+}
+
 @test "install-agents: outputs JSON with status ok" {
   cd "$TEST_TEMP_DIR"
   ORCHESTRATION=subagents run "$SCRIPTS_DIR/install-agents.sh"

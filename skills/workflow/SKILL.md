@@ -88,6 +88,11 @@ Orchestration mode — How should /breakdown, /spec, and /work orchestrate agent
   b) Agent teams (experimental) — teammates work on parallel domains of the
      codebase on a shared branch. Requires CC v2.1.32+ and
      CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS enabled.
+
+  c) PEE loop — sequential Planner → Executor → Evaluator loop per spec on a
+     shared branch, with one full quality pass at the end. Optimized for
+     spec-compliance correctness, not raw speed. Uses opus for planner/evaluator
+     and sonnet for the executor. Requires agent teams enabled.
 ```
 
 ### Question 2 — Commands
@@ -158,11 +163,11 @@ The quality gate will skip checks for tools that aren't installed.
 Run in parallel if subagents are available, otherwise sequential:
 
 ```bash
-ORCHESTRATION="[subagents|teams]" \
+ORCHESTRATION="[subagents|teams|loop]" \
 COMMANDS="[comma-separated approved list]" \
 bash scripts/install-commands.sh
 
-ORCHESTRATION="[subagents|teams]" \
+ORCHESTRATION="[subagents|teams|loop]" \
 bash scripts/install-agents.sh
 ```
 
@@ -191,7 +196,7 @@ greenfield/brownfield to regenerate.
 
 ## Step 6 — Patch Settings for Agent Teams (if chosen)
 
-If orchestration = teams:
+If orchestration = `teams` or `loop` (both require agent teams for cross-agent SendMessage):
 
 ```bash
 bash scripts/patch-settings-teams.sh
@@ -235,10 +240,10 @@ Commands installed:
   /update-skills              — find and install skills for project dependencies
 
 Agents installed:
-  architect                           — plans features and architecture
-  [implementer | domain-implementer]  — implements specs
-  quality                             — 4-gate quality review
-  git-expert                          — worktrees, merges, verification
+  architect                                       — plans features and architecture
+  [implementer | domain-implementer | planner+executor+evaluator]  — implement specs
+  quality                                         — 8-gate quality review
+  git-expert                                      — worktrees, merges, verification
 
 Quality tools:
   gitleaks: [✅ active in quality gate | ⚠️ not installed]

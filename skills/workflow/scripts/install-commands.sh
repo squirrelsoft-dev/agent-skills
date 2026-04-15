@@ -21,6 +21,11 @@ if echo "$COMMANDS" | grep -q "breakdown"; then
     cp "$REFS/spec-teams.md"      .claude/commands/spec.md
     cp "$REFS/work-teams.md"      .claude/commands/work.md
     echo "Installed breakdown/spec/work (agent teams mode)" >&2
+  elif [ "$ORCHESTRATION" = "loop" ]; then
+    cp "$REFS/breakdown-subagents.md" .claude/commands/breakdown.md
+    cp "$REFS/spec-subagents.md"      .claude/commands/spec.md
+    cp "$REFS/work-loop.md"           .claude/commands/work.md
+    echo "Installed breakdown/spec/work (PEE loop mode)" >&2
   else
     cp "$REFS/breakdown-subagents.md" .claude/commands/breakdown.md
     cp "$REFS/spec-subagents.md"      .claude/commands/spec.md

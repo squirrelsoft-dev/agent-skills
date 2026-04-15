@@ -34,13 +34,14 @@ setup() {
   assert_file_executable "$SKILL_DIR/scripts/patch-settings-teams.sh"
 }
 
-@test "package: all 14 command references exist" {
+@test "package: all 15 command references exist" {
   assert_file_exists "$SKILL_DIR/references/commands/breakdown-subagents.md"
   assert_file_exists "$SKILL_DIR/references/commands/breakdown-teams.md"
   assert_file_exists "$SKILL_DIR/references/commands/spec-subagents.md"
   assert_file_exists "$SKILL_DIR/references/commands/spec-teams.md"
   assert_file_exists "$SKILL_DIR/references/commands/work-subagents.md"
   assert_file_exists "$SKILL_DIR/references/commands/work-teams.md"
+  assert_file_exists "$SKILL_DIR/references/commands/work-loop.md"
   assert_file_exists "$SKILL_DIR/references/commands/commit.md"
   assert_file_exists "$SKILL_DIR/references/commands/fix-issue.md"
   assert_file_exists "$SKILL_DIR/references/commands/pr.md"
@@ -51,21 +52,24 @@ setup() {
   assert_file_exists "$SKILL_DIR/references/commands/update-skills.md"
 }
 
-@test "package: all 6 agent references exist" {
+@test "package: all 9 agent references exist" {
   assert_file_exists "$SKILL_DIR/references/agents/architect.md"
   assert_file_exists "$SKILL_DIR/references/agents/implementer.md"
   assert_file_exists "$SKILL_DIR/references/agents/domain-implementer.md"
   assert_file_exists "$SKILL_DIR/references/agents/quality.md"
   assert_file_exists "$SKILL_DIR/references/agents/git-expert.md"
   assert_file_exists "$SKILL_DIR/references/agents/manager.md"
+  assert_file_exists "$SKILL_DIR/references/agents/planner.md"
+  assert_file_exists "$SKILL_DIR/references/agents/executor.md"
+  assert_file_exists "$SKILL_DIR/references/agents/evaluator.md"
 }
 
 @test "package: triage-skill.md reference exists" {
   assert_file_exists "$SKILL_DIR/references/triage-skill.md"
 }
 
-@test "package: total file count is 30" {
+@test "package: total file count is 34" {
   local count
-  count=$(find "$SKILL_DIR" -type f -not -path "*/tests/*" 2>/dev/null | wc -l)
-  [ "$count" -eq 30 ]
+  count=$(find "$SKILL_DIR" -type f -not -path "*/tests/*" -not -name ".DS_Store" 2>/dev/null | wc -l)
+  [ "$count" -eq 34 ]
 }

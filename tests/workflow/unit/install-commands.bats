@@ -26,6 +26,15 @@ teardown() { common_teardown; }
   assert_file_contains "$TEST_TEMP_DIR/.claude/commands/breakdown.md" "domain ownership"
 }
 
+@test "install-commands: loop mode installs work-loop as work.md" {
+  cd "$TEST_TEMP_DIR"
+  ORCHESTRATION=loop COMMANDS=breakdown run "$SCRIPTS_DIR/install-commands.sh"
+  [ "$status" -eq 0 ]
+  assert_file_exists "$TEST_TEMP_DIR/.claude/commands/work.md"
+  assert_file_contains "$TEST_TEMP_DIR/.claude/commands/work.md" "Work (Loop)"
+  assert_file_contains "$TEST_TEMP_DIR/.claude/commands/breakdown.md" "dependency tracking"
+}
+
 @test "install-commands: default COMMANDS installs all expected files" {
   cd "$TEST_TEMP_DIR"
   ORCHESTRATION=subagents run "$SCRIPTS_DIR/install-commands.sh"
