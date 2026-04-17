@@ -17,11 +17,10 @@ setup() {
   export GITLEAKS=$(echo "$detect_out" | jq -r '.gitleaks')
   export SEMGREP=$(echo "$detect_out" | jq -r '.semgrep')
 
-  # Loop mode shares agent teams requirements — same patch order as teams
+  # Loop mode uses one-shot subagents — no teams patch required
   "$SCRIPTS_DIR/install-commands.sh" > /dev/null 2>&1
   "$SCRIPTS_DIR/install-agents.sh" > /dev/null 2>&1
   "$SCRIPTS_DIR/install-triage-skill.sh" > /dev/null 2>&1
-  "$SCRIPTS_DIR/patch-settings-teams.sh" > /dev/null 2>&1
   "$SCRIPTS_DIR/patch-quality-gate.sh" > /dev/null 2>&1
 }
 

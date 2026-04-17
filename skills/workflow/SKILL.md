@@ -82,18 +82,21 @@ Setting up your development workflow.
 
 Orchestration mode — How should /breakdown, /spec, and /work orchestrate agents?
 
-  a) Subagents (recommended) — parallel workers in isolated git worktrees,
-     merged by the git-expert agent. Stable, works everywhere.
+  a) Subagents — parallel (recommended) — parallel workers in isolated git
+     worktrees, merged by the git-expert agent. Stable, works everywhere.
 
-  b) Agent teams (experimental) — teammates work on parallel domains of the
+  b) Subagents — PEE loop — sequential Planner → Executor → Evaluator loop
+     per spec on a shared branch, with one full quality pass at the end.
+     One-shot subagents (no team infrastructure). Optimized for spec-compliance
+     correctness, not raw speed. Uses opus for planner/evaluator and sonnet
+     for the executor.
+
+  c) Agent teams (experimental) — teammates work on parallel domains of the
      codebase on a shared branch. Requires CC v2.1.32+ and
      CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS enabled.
-
-  c) PEE loop — sequential Planner → Executor → Evaluator loop per spec on a
-     shared branch, with one full quality pass at the end. Optimized for
-     spec-compliance correctness, not raw speed. Uses opus for planner/evaluator
-     and sonnet for the executor. Requires agent teams enabled.
 ```
+
+Map the answer to the internal `ORCHESTRATION` value: a → `subagents`, b → `loop`, c → `teams`.
 
 ### Question 2 — Commands
 
@@ -196,7 +199,8 @@ greenfield/brownfield to regenerate.
 
 ## Step 6 — Patch Settings for Agent Teams (if chosen)
 
-If orchestration = `teams` or `loop` (both require agent teams for cross-agent SendMessage):
+If orchestration = `teams` only (the PEE loop mode uses one-shot subagents and
+does not need team infrastructure):
 
 ```bash
 bash scripts/patch-settings-teams.sh
@@ -229,7 +233,7 @@ git commit -m "chore(claude): install development workflow"
 ✅ Workflow Setup Complete
 
 Commands installed:
-  /breakdown + /spec + /work  — [subagents | agent teams] orchestration
+  /breakdown + /spec + /work  — [subagents parallel | subagents PEE loop | agent teams] orchestration
   /commit                     — conventional commit message generator
   /review                     — code review of current changes
   /pr + /squash-pr            — pull request workflow
@@ -250,7 +254,7 @@ Quality tools:
   semgrep:  [✅ active in quality gate | ⚠️ not installed]
   gh CLI:   [✅ installed | ⚠️ not installed — /triage, /pr, /squash-pr need this]
 
-Agent teams hooks: [added to settings.json | not configured]
+Agent teams hooks: [added to settings.json | not needed for this orchestration mode]
 
 ⚠️ Restart Claude Code to load the new commands and agents.
 
