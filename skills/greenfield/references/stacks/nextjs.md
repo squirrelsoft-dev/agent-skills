@@ -26,11 +26,12 @@ Resolve env vars using `PKG_MANAGER` as the column key:
 
 ### LINT_CMD by FORMATTER
 
-> The default row assumes `package.json` defines `"lint": "next lint"` (Next.js default). If no lint script exists, fall back to `npx eslint .`.
+> The default uses `oxlint` (fast, ESLint-compatible). The `prettier` row assumes `package.json` defines `"lint": "next lint"` (Next.js default); if no lint script exists, fall back to `npx eslint .`.
 
 | FORMATTER | npm | pnpm | yarn | bun |
 |---|---|---|---|---|
-| `prettier` (default) | `npm run lint` | `pnpm lint` | `yarn lint` | `bun run lint` |
+| `oxfmt` (default) | `npx oxlint` | `pnpm oxlint` | `yarn oxlint` | `bun oxlint` |
+| `prettier` | `npm run lint` | `pnpm lint` | `yarn lint` | `bun run lint` |
 | `biome` | `npx biome check .` | `pnpm biome check .` | `yarn biome check .` | `bun biome check .` |
 
 ---
@@ -70,7 +71,7 @@ public/               # Static assets
 - next, react, react-dom
 - typescript, @types/react, @types/node
 - tailwindcss (common but not required)
-- eslint-config-next (Next.js lint preset)
+- oxlint + oxfmt (default), or eslint-config-next (Next.js lint preset) + prettier
 - vitest or jest (testing)
 
 ---

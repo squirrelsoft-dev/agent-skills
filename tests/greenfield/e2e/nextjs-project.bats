@@ -118,8 +118,8 @@ teardown() {
   done
 }
 
-@test "e2e/nextjs: format.sh uses prettier" {
-  assert_file_contains "$PROJECT_DIR/.claude/hooks/format.sh" 'npx prettier --write'
+@test "e2e/nextjs: format.sh uses oxfmt" {
+  assert_file_contains "$PROJECT_DIR/.claude/hooks/format.sh" 'exec oxfmt'
 }
 
 @test "e2e/nextjs: stop-quality-gate.sh embeds pnpm commands" {

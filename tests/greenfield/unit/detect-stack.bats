@@ -24,12 +24,12 @@ teardown() {
   assert_json_stdout_field '.has_typescript' 'true'
 }
 
-@test "detects prettier as default formatter for node" {
+@test "detects oxfmt as default formatter for node" {
   copy_fixture "nextjs"
   cd "$TEST_TEMP_DIR"
   run "$SCRIPTS_DIR/detect-stack.sh"
   [ "$status" -eq 0 ]
-  assert_json_stdout_field '.formatter' 'prettier'
+  assert_json_stdout_field '.formatter' 'oxfmt'
 }
 
 @test "detects python stack from pyproject.toml" {

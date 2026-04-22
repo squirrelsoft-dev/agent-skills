@@ -9,7 +9,7 @@ set -e
 #   PROJECT_DIR   required
 #   STACK         required (typescript-node|react|nextjs|python|go)
 #   PKG_MANAGER   required (npm|pnpm|yarn|bun|pip|poetry|uv|go)
-#   FORMATTER     required (prettier|biome|ruff|gofmt|rustfmt|dotnet-format)
+#   FORMATTER     required (oxfmt|prettier|biome|ruff|gofmt|rustfmt|dotnet-format)
 #   TEST_RUNNER   optional (vitest|jest|mocha|pytest|go-test)
 #   TYPECHECKER   optional, python only (ty|pyright|mypy)
 
@@ -31,6 +31,7 @@ mkdir -p "$HOOKS_DIR"
 # --- Resolve formatter command ---
 
 case "$FORMATTER" in
+  oxfmt)         FMT_CMD="$PKG_MANAGER"' exec oxfmt -- "$FILE" 2>/dev/null || true' ;;
   prettier)      FMT_CMD='npx prettier --write "$FILE" 2>/dev/null || true' ;;
   biome)         FMT_CMD='npx @biomejs/biome format --write "$FILE" 2>/dev/null || true' ;;
   ruff)          FMT_CMD='ruff format "$FILE" 2>/dev/null || true' ;;
@@ -127,7 +128,7 @@ else
 fi
 
 # Regex of path prefixes to exclude from every array.
-EXCLUDE='(^|/)(node_modules|dist|\.next|\.turbo|coverage|__pycache__|\.venv|venv|vendor|target|build)/'
+EXCLUDE='(^|/)(node_modules|dist|\.next|\.turbo|coverage|__pycache__|\.venv|venv|vendor|target|build)/|^\.claude/skills/|^\.agents/skills/'
 
 # CHANGED[] = deduped, existing, non-excluded files across all three diff sources.
 # awk dedupes (bash 3.2 has no associative arrays), then we filter in bash.

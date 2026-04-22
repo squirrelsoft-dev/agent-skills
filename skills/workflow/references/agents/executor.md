@@ -2,7 +2,7 @@
 name: executor
 description: "Implements a pre-computed plan from the planner agent. Writes code, does not commit."
 tools: Read, Write, Edit, Bash, Grep, Glob
-model: sonnet
+model: haiku
 permissionMode: acceptEdits
 
 ---

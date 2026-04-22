@@ -2,7 +2,7 @@
 name: evaluator
 description: "Runs per-spec mini-QA (lint, typecheck, test, playwright, spec-compliance review) and reports actionable findings when the implementation diverges from the spec."
 tools: Read, Write, Bash, Grep, Glob
-model: opus
+model: sonnet
 permissionMode: acceptEdits
 ---
 

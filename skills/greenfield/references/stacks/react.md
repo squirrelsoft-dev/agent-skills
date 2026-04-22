@@ -25,18 +25,19 @@ Resolve env vars using `PKG_MANAGER` as the column key:
 
 ### LINT_CMD by FORMATTER
 
-> React has no built-in lint command. Fall back to `eslint .` if eslint is present, otherwise use the formatter directly.
+> React has no built-in lint command. Default to `oxlint` (fast, ESLint-compatible rules); fall back to `eslint .` if eslint is already configured.
 
 | FORMATTER | npm | pnpm | yarn | bun |
 |---|---|---|---|---|
-| `prettier` (default) | `npx eslint .` | `pnpm eslint .` | `yarn eslint .` | `bun eslint .` |
+| `oxfmt` (default) | `npx oxlint` | `pnpm oxlint` | `yarn oxlint` | `bun oxlint` |
+| `prettier` | `npx eslint .` | `pnpm eslint .` | `yarn eslint .` | `bun eslint .` |
 | `biome` | `npx biome check .` | `pnpm biome check .` | `yarn biome check .` | `bun biome check .` |
 
 ---
 
 ## Framework Details
 
-- No built-in lint command — use `eslint .` if eslint is present
+- No built-in lint command — use `oxlint` by default, or `eslint .` if eslint is already configured
 - Build output depends on bundler: Vite → `dist/`, CRA → `build/`
 - `DEV_CMD` is `$PKG_MANAGER run dev` (both Vite and CRA use this)
 - Add the build output directory to `.gitignore`
@@ -71,7 +72,7 @@ public/                 # Static assets
 - react, react-dom
 - typescript, @types/react
 - vite or react-scripts (bundler)
-- eslint, eslint-plugin-react-hooks
+- oxlint + oxfmt (default), or eslint + eslint-plugin-react-hooks + prettier
 - vitest or jest (testing)
 - tailwindcss (common but not required)
 

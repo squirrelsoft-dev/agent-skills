@@ -19,7 +19,7 @@ HAS_TYPESCRIPT="false"
 if [ -f "package.json" ]; then
   LANG="javascript"
   PKG_MANAGER="npm"
-  FORMATTER="prettier"
+  FORMATTER="oxfmt"
 
   # Package manager
   [ -f "bun.lockb" ] && PKG_MANAGER="bun"
@@ -29,7 +29,7 @@ if [ -f "package.json" ]; then
   # TypeScript
   [ -f "tsconfig.json" ] && HAS_TYPESCRIPT="true" && LANG="typescript"
 
-  # Formatter
+  # Formatter — respect existing config if present, otherwise default to oxfmt.
   if [ -f "biome.json" ] || [ -f "biome.jsonc" ]; then
     FORMATTER="biome"
   elif ls .prettierrc* prettier.config.* 2>/dev/null | grep -q .; then

@@ -340,18 +340,23 @@ Otherwise, run the full 8-gate quality pass once across the entire feature branc
 
 Initialize `qualityAttempt = 1`.
 
+Gates are split by capability:
+
+- **Gates 1-4** (mechanical — lint, typecheck, build, test): delegated to a quality subagent
+- **Gates 5-8** (skill-based — simplify, review, security-review, security-scan): run by the **main agent** directly using the `Skill` tool, because subagents do not have access to the `Skill` tool
+
 Loop:
 
-1. Invoke a fresh quality subagent:
+1. **Run gates 1-4** — invoke a fresh quality subagent:
 
    ```
    Agent({
      subagent_type: "quality",
      model: "sonnet",
      mode: "<permissionMode>",
-     description: "Final quality pass attempt <qualityAttempt>",
+     description: "Final quality pass attempt <qualityAttempt> (gates 1-4)",
      prompt: `
-       You are the quality agent running the final full pass for the loop mode.
+       You are the quality agent running gates 1-4 of the final full pass.
        Branch: feat/$ARGUMENTS
        Task: $ARGUMENTS (final pass, attempt <qualityAttempt>)
        logDir: .workflow/quality/$ARGUMENTS/final/attempt-<qualityAttempt>/
@@ -360,16 +365,24 @@ Loop:
        buildCmd: <buildCmd or empty>
        testCmd: <testCmd or empty>
 
-       Run ALL 8 gates on the current branch state.
+       Run ONLY gates 1-4 (lint, typecheck, build, test) on the current branch state.
        Auto-remediate each gate up to 3 attempts.
        Return ONLY the QUALITY_GATE_REPORT...QUALITY_GATE_REPORT_END block as your final output.
      `
    })
    ```
 
-2. Parse the `QUALITY_GATE_REPORT` from the subagent's output.
+2. Parse the `QUALITY_GATE_REPORT` from the subagent's output for gates 1-4.
 
-3. Display:
+3. **Run gates 5-8** — invoke each skill directly using the `Skill` tool:
+   - `Skill({ skill: "simplify" })`
+   - `Skill({ skill: "review" })`
+   - `Skill({ skill: "security-review" })`
+   - `Skill({ skill: "security-scan" })`
+
+   Run these sequentially. Record PASS if the skill completes without finding blocking issues, FAIL if it surfaces critical findings that require fixes.
+
+4. Display combined results:
 
    ```
    [final pass — attempt <qualityAttempt>]
@@ -383,17 +396,19 @@ Loop:
      security-scan:   PASS | FAIL
    ```
 
-4. Verify logs:
+5. Verify logs from the subagent:
 
    ```bash
    ls .workflow/quality/$ARGUMENTS/final/attempt-<qualityAttempt>/gate-*.log 2>/dev/null | wc -l
    ```
 
-   If fewer than 8, warn the user.
+   If fewer than 4, warn the user.
 
-5. If `overall: PASS`, break out of the loop and proceed to Cleanup.
+6. Determine `overall`: PASS only if all 8 gates pass (or are SKIPPED). Any FAIL means overall FAIL.
 
-6. If `overall: FAIL`, ask the user via `AskUserQuestion`: "Final quality pass failed (attempt `<qualityAttempt>`). Retry, accept anyway, or stop?"
+7. If `overall: PASS`, break out of the loop and proceed to Cleanup.
+
+8. If `overall: FAIL`, ask the user via `AskUserQuestion`: "Final quality pass failed (attempt `<qualityAttempt>`). Retry, accept anyway, or stop?"
    - **Retry**: increment `qualityAttempt` and loop back to (1)
    - **Accept anyway**: break out of the loop, proceed to Cleanup
    - **Stop**: break out of the loop, proceed to Cleanup
@@ -445,7 +460,8 @@ No team to tear down — all subagents were one-shot invocations and have alread
 - Do NOT read spec files — pass spec paths to subagents, let them read
 - Do NOT read source files — executor and evaluator own that
 - Do NOT implement anything directly — delegate to the executor subagent
-- Do NOT run quality gates directly — delegate to the evaluator (per-spec) and quality (final pass) subagents
+- Do NOT run quality gates directly for per-spec evaluation — delegate to the evaluator subagent
+- For the final quality pass: delegate gates 1-4 (lint, typecheck, build, test) to the quality subagent; run gates 5-8 (simplify, review, security-review, security-scan) directly via the `Skill` tool in the main agent — subagents do not have access to the `Skill` tool
 - Do NOT commit directly — delegate to the git-expert subagent
 - Do NOT use `TeamCreate`, `TeamDelete`, or `SendMessage` — every worker is a one-shot `Agent` invocation
 - DO process specs strictly sequentially

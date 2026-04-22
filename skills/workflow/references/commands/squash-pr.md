@@ -291,7 +291,7 @@ Closes #<issue>
 ### 11. Push the branch
 
 ```bash
-git push --force-with-lease origin <targetBranch>
+git push origin <targetBranch>
 ```
 
 ### 12. Open the PR

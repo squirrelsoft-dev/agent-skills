@@ -13,7 +13,7 @@ Resolve env vars using `PKG_MANAGER` as the column key:
 | `INSTALL_CMD` | `npm install` | `pnpm install` | `yarn install` | `bun install` |
 | `DEV_CMD` | `npx tsx watch src/index.ts` | `pnpm tsx watch src/index.ts` | `yarn tsx watch src/index.ts` | `bun --watch src/index.ts` |
 | `BUILD_CMD` | `npx tsc` | `pnpm tsc` | `yarn tsc` | `bun build src/index.ts --outdir dist` |
-| `LINT_CMD` | `npx eslint .` | `pnpm eslint .` | `yarn eslint .` | `bun eslint .` |
+| `LINT_CMD` | `npx oxlint` | `pnpm oxlint` | `yarn oxlint` | `bun oxlint` |
 
 > **Note:** If package.json defines a `"dev"` script, prefer `$PKG_MANAGER run dev` over the `tsx watch` default.
 
@@ -44,7 +44,8 @@ Resolve env vars using `PKG_MANAGER` as the column key:
 
 | FORMATTER | npm | pnpm | yarn | bun |
 |---|---|---|---|---|
-| `prettier` (default) | `npx eslint .` | `pnpm eslint .` | `yarn eslint .` | `bun eslint .` |
+| `oxfmt` (default) | `npx oxlint` | `pnpm oxlint` | `yarn oxlint` | `bun oxlint` |
+| `prettier` | `npx eslint .` | `pnpm eslint .` | `yarn eslint .` | `bun eslint .` |
 | `biome` | `npx biome check .` | `pnpm biome check .` | `yarn biome check .` | `bun biome check .` |
 
 ---
@@ -75,7 +76,7 @@ tests/                # Test files
 ## Key Dependencies
 
 - typescript, @types/node, tsx
-- eslint or @biomejs/biome
+- oxlint + oxfmt (default), or eslint + prettier, or @biomejs/biome
 - vitest or jest (testing)
 - tsup (optional — bundler for libraries)
 - express / fastify / hono (if FRAMEWORK=node-api)

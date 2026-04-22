@@ -64,12 +64,12 @@ teardown() { common_teardown; }
   assert_file_contains "$TEST_TEMP_DIR/.claude/agents/planner.md" "model: opus"
 }
 
-@test "e2e/loop: evaluator declares opus model" {
-  assert_file_contains "$TEST_TEMP_DIR/.claude/agents/evaluator.md" "model: opus"
+@test "e2e/loop: evaluator declares sonnet model" {
+  assert_file_contains "$TEST_TEMP_DIR/.claude/agents/evaluator.md" "model: sonnet"
 }
 
-@test "e2e/loop: executor declares sonnet model" {
-  assert_file_contains "$TEST_TEMP_DIR/.claude/agents/executor.md" "model: sonnet"
+@test "e2e/loop: executor declares haiku model" {
+  assert_file_contains "$TEST_TEMP_DIR/.claude/agents/executor.md" "model: haiku"
 }
 
 @test "e2e/loop: triage skill installed" {
