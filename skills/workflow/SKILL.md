@@ -82,21 +82,21 @@ Setting up your development workflow.
 
 Orchestration mode — How should /breakdown, /spec, and /work orchestrate agents?
 
-  a) Subagents — parallel (recommended) — parallel workers in isolated git
-     worktrees, merged by the git-expert agent. Stable, works everywhere.
+  a) Subagents — PEE loop (recommended) — sequential Planner → Executor →
+     Evaluator loop per spec on a shared branch, with one full quality pass
+     at the end. One-shot subagents (no team infrastructure). Optimized for
+     spec-compliance correctness. Uses opus for planner, sonnet for the
+     evaluator, and haiku for the executor.
 
-  b) Subagents — PEE loop — sequential Planner → Executor → Evaluator loop
-     per spec on a shared branch, with one full quality pass at the end.
-     One-shot subagents (no team infrastructure). Optimized for spec-compliance
-     correctness, not raw speed. Uses opus for planner/evaluator and sonnet
-     for the executor.
+  b) Subagents — parallel — parallel workers in isolated git worktrees,
+     merged by the git-expert agent. Stable, works everywhere.
 
   c) Agent teams (experimental) — teammates work on parallel domains of the
      codebase on a shared branch. Requires CC v2.1.32+ and
      CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS enabled.
 ```
 
-Map the answer to the internal `ORCHESTRATION` value: a → `subagents`, b → `loop`, c → `teams`.
+Map the answer to the internal `ORCHESTRATION` value: a → `loop`, b → `subagents`, c → `teams`.
 
 ### Question 2 — Commands
 
