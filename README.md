@@ -7,8 +7,8 @@ Claude Code agent skills for intelligent, interview-driven project configuration
 | Skill | Description | Status |
 |---|---|---|
 | **greenfield** | Set up Claude Code for a brand new project from scratch | ✅ Available |
+| **brownfield** | Analyze and configure Claude Code for an existing project | ✅ Available |
 | **workflow** | Install development commands and agent workflows | ✅ Available |
-| **brownfield** | Analyze and configure Claude Code for an existing project | In progress |
 
 ## Installation
 
@@ -16,6 +16,7 @@ Install a skill using [open-agent-skills](https://agentskills.io):
 
 ```bash
 npx skills add squirrelsoft-dev/agent-skills@greenfield
+npx skills add squirrelsoft-dev/agent-skills@brownfield
 npx skills add squirrelsoft-dev/agent-skills@workflow
 ```
 

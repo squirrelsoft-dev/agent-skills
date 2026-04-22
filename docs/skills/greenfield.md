@@ -36,7 +36,7 @@ Runs `detect-stack.sh` against the current directory to identify:
 | Framework | Dependencies in package.json or requirements.txt |
 | Language | TypeScript detection via tsconfig.json |
 | Package manager | Lockfile presence (bun.lockb, pnpm-lock.yaml, yarn.lock) |
-| Formatter | biome.json, .prettierrc, etc. |
+| Formatter | biome.json or .prettierrc if present; otherwise defaults to oxfmt for JS/TS, ruff for Python, gofmt for Go, rustfmt for Rust, dotnet-format for .NET |
 | Test runner | vitest, jest, mocha in package.json; pytest, go test, cargo test by stack |
 
 Outputs a JSON object passed as environment variables to all generator scripts.
@@ -119,11 +119,11 @@ Written to `.claude/rules/`. Which files are created depends on the detected sta
 
 ## Supported stacks
 
-| Stack | Detected by | Formatter | Test runner |
+| Stack | Detected by | Default formatter | Test runner |
 |---|---|---|---|
-| `nextjs` | `"next"` in package.json | biome or prettier | vitest or jest |
-| `react` | `"react"` in package.json | biome or prettier | vitest or jest |
-| `typescript-node` | express/fastify/hono or plain package.json | biome or prettier | vitest, jest, or mocha |
+| `nextjs` | `"next"` in package.json | oxfmt (biome/prettier if already configured) | vitest or jest |
+| `react` | `"react"` in package.json | oxfmt (biome/prettier if already configured) | vitest or jest |
+| `typescript-node` | express/fastify/hono or plain package.json | oxfmt (biome/prettier if already configured) | vitest, jest, or mocha |
 | `python` | requirements.txt or pyproject.toml | ruff | pytest |
 | `go` | go.mod | gofmt | go test |
 | `rust` | Cargo.toml | rustfmt | cargo test |
@@ -137,7 +137,7 @@ Written to `.claude/rules/`. Which files are created depends on the detected sta
 The greenfield skill has unit and end-to-end tests using bats-core:
 
 ```bash
-bash skills/greenfield/tests/run-tests.sh
+bash tests/greenfield/run-tests.sh
 ```
 
 Unit tests verify each generator script in isolation. E2E tests run the full pipeline for four scenarios: Next.js, Python, empty project, and a project with an existing `.claude/` directory. All tests run in temporary directories.

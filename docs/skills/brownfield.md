@@ -1,7 +1,5 @@
 # Brownfield Skill
 
-> 🚧 This skill is currently in development.
-
 Configures Claude Code for an **existing codebase** by discovering what's already there — conventions, architecture, testing patterns, git workflow — then generating tailored configuration from those findings.
 
 Unlike the greenfield skill, conventions are **detected** from the actual project rather than defined in an interview.

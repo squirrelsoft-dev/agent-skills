@@ -9,8 +9,8 @@ Skills configure Claude Code for a project. Run one skill first to set up the fo
 | Skill | Purpose | Status |
 |---|---|---|
 | [greenfield](skills/greenfield.md) | Configure Claude Code for a brand new project | ✅ Available |
-| [brownfield](skills/brownfield.md) | Analyze an existing codebase and generate Claude Code config | 🚧 In progress |
-| [workflow](skills/workflow.md) | Install development commands, agents, and the triage skill | 🚧 In progress |
+| [brownfield](skills/brownfield.md) | Analyze an existing codebase and generate Claude Code config | ✅ Available |
+| [workflow](skills/workflow.md) | Install development commands, agents, and the triage skill | ✅ Available |
 
 ### Installation
 
@@ -68,6 +68,7 @@ Commands are slash commands installed by the `workflow` skill.
 | [/fix-issue](commands/fix-issue.md) | Implement a GitHub issue end-to-end |
 | [/security-scan](commands/security-scan.md) | On-demand deep security scan |
 | [/triage](commands/triage.md) | Analyze and plan a GitHub issue |
+| `/update-skills` | Refresh installed skills to their latest versions |
 
 ### Workflows
 
@@ -80,21 +81,24 @@ Visual diagrams of the development loop pipelines.
 | [Subagent Work Flow](workflows/subagent-flow.md) | Parallel workers in isolated worktrees, merged by git-expert |
 | [Agent Teams Work Flow](workflows/agent-teams-flow.md) | Persistent domain teammates with group-based execution |
 
+The PEE loop mode (recommended) runs Planner → Executor → Evaluator sequentially per spec on a shared branch, with an 8-gate final pass. See [`/work`](commands/work.md) for the full flow.
+
 ---
 
 ## Testing
 
-The greenfield skill has unit and end-to-end tests using [bats-core](https://github.com/bats-core/bats-core).
+Tests use [bats-core](https://github.com/bats-core/bats-core) and live in the repo root `tests/` directory (so they aren't shipped to end users by the skills installer).
 
 ```bash
-bash skills/greenfield/tests/run-tests.sh
+bash tests/greenfield/run-tests.sh
+bash tests/workflow/run-tests.sh
 ```
 
 | Directory | What it tests |
 |---|---|
-| `tests/unit/` | Each generator script in isolation (detect-stack, generate-settings, generate-hooks, generate-rules, generate-claude-md, generate-gitignore) |
-| `tests/e2e/` | Full pipeline per scenario (Next.js, Python, empty project, existing `.claude/` directory) |
-| `tests/fixtures/` | Minimal project files for each test scenario |
+| `tests/<skill>/unit/` | Each script in isolation (e.g. detect-stack, generate-hooks, patch-quality-gate) |
+| `tests/<skill>/e2e/` | Full pipeline per scenario (Next.js, Python, empty project; subagents / teams / loop mode) |
+| `tests/<skill>/fixtures/` | Minimal project files for each test scenario |
 | `tests/helpers/` | Shared setup/teardown and assertion functions |
 
-bats-core is auto-installed on first run (cloned into `tests/.bats-core/`, git-ignored). Each test runs in a fresh temporary directory.
+bats-core is auto-installed on first run. Each test runs in a fresh temporary directory.
