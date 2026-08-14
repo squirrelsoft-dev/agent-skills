@@ -5,11 +5,13 @@ description: 'Run one Claude Code agent per GitHub issue in its own Herdr worktr
 
 # Herd
 
-One issue, one worktree, one claude agent, and a four-stage loop around it:
+One issue, one worktree, one claude agent, and a five-stage loop around it:
 
-    triage (already done)  →  plan  →  build  →  review  →  fix
-                            claude    claude    claude    claude
-                           subagent   worker   subagent   worker
+    triage  →  plan  →  build  →  review  →  fix
+    claude    claude    claude    claude    claude
+   subagent  subagent   worker   subagent   worker
+
+Triage is a stage you run, not a precondition you hope for. See stage 1.
 
 You are the conductor. The user talks only to you. Workers never talk to each
 other, and the user never babysits a pane.
@@ -73,11 +75,44 @@ Two questions, not one, and the second is the one people skip:
 
 ## 1. Admit the batch
 
-Issues must be **triaged first**, against the code as it stands now. A triage
-comment written before the last three PRs landed is worse than none — the
-planner will brief against a codebase that no longer exists. If the batch is not
-triaged or the triage is stale, run the project's triage skill first and say
-that you are doing so.
+### Triage is a stage you run, and it writes acceptance criteria onto the issue
+
+Issues must be **triaged against the code as it stands now**, and the triage must
+live **on the issue** as a comment — not in your context, not in a brief, not in a
+message to the user. A triage comment written before the last three PRs landed is
+worse than none: the planner will brief against a codebase that no longer exists.
+
+**You MUST run a triage pass — one Claude subagent per issue — whenever an issue
+has no triage comment, or its triage predates a commit touching the code it
+cites.** Use the project's own triage skill if it has one. A project that has no
+triage skill is not an exemption; it means you run the pass described here. Say
+that you are doing it, and finish it **before any planner is spawned**.
+
+The triage subagent posts to the issue, with `gh issue comment`:
+
+- **Acceptance criteria** — a numbered, checkable list of what "done" means, in the
+  issue's own terms. **This is the point of the stage.** An issue with no
+  acceptance criteria forces the *planner* to invent the scope boundary, and a
+  boundary invented at plan time is invisible to every stage after it: the worker
+  executes it, the gate checks counts derived from it, the reviewer checks the diff
+  against it, and the issue closes on merge having shipped whatever the planner
+  guessed. Criteria written onto the issue put that decision somewhere the user and
+  every later reader can see and argue with it.
+- **A staleness verdict** — every `file:line` the issue cites, confirmed to exist
+  and still mean what the issue says, or reported as drifted, with what it is now.
+- **Adjacent work the triage found and is NOT claiming** — named explicitly, so the
+  planner is not the first to notice it and the user sees it before dispatch rather
+  than as a stage-3 carve-out.
+
+Many issues in a mature repo already carry criteria under a heading like "Done
+when". Where one does, triage confirms each against the code and says so; where one
+does not, triage **writes them**. Do not let a planner supply criteria the issue
+lacks — that substitution is the whole failure this stage exists to prevent, and
+"the planner enumerated the requirements" is not a replacement for it.
+
+**Criteria you had to author are criteria the user has not agreed to.** Put them in
+front of the user with the batch at the go-ahead below — as criteria, plainly, not
+folded into a stage-3 carve-out list where they read as someone else's decision.
 
 Then check the batch for **serialization points** — things that cannot be
 parallel no matter how many agents you run. Find the project's own; these are
@@ -94,7 +129,8 @@ the usual ones:
 - **Shared stateful services.** See stage 2.
 
 If two issues in a batch collide on any of these, they are not parallel. Move
-one to the next batch. Show the user the batch and the collisions you found, and
+one to the next batch. Show the user the batch, the collisions you found, and
+**every acceptance criterion triage had to author rather than confirm**, and
 **get an explicit go-ahead** before spawning anything.
 
 Cap concurrent workers at **4**. Each runs builds and suites.
@@ -165,13 +201,21 @@ Spawn one **Agent-tool subagent** (not a Herdr pane agent) per issue. Its job is
 to turn the triaged issue into an ordered, concrete brief for a worker that has
 none of this context.
 
-Give the planner: the issue number, the worktree path, and the project's
-convention files (`CLAUDE.md`/`AGENTS.md`, `.claude/rules/`). Have it return:
+Give the planner: the issue number, the worktree path, **the acceptance criteria
+stage 1 put on the issue**, and the project's convention files
+(`CLAUDE.md`/`AGENTS.md`, `.claude/rules/`). Have it return:
 
-- **every requirement the issue states, enumerated**, each marked `covered` or
-  `proposed out of scope`. Not a summary — a list, in the issue's own terms, that
+- **every acceptance criterion, enumerated**, each marked `covered` or `proposed
+  out of scope`. Not a summary — the stage-1 list, in the issue's own terms, that
   can be checked off. This list is what the reviewer checks the diff against at
   stage 6, so it is the spine of the brief.
+
+  **The planner does not author criteria and does not edit them.** If it believes
+  one is wrong, missing, or ambiguous, it says so in its return and stops short of
+  deciding — that is a triage correction, which goes back on the issue and past the
+  user, not a line a planner rewrites inside a brief. A planner that supplies its
+  own scope boundary produces a run where every later stage agrees with a decision
+  nobody made.
 - the steps, in dependency order, each naming the files it touches
 - the decisions **already made** that the worker must not relitigate, with their
   reasons — this is what stops a worker redesigning the issue
@@ -400,12 +444,14 @@ issue, the brief, and the branch. Then:
 
 - **Make it adversarial.** "Find defects, not agreement." A reviewer told to
   check work confirms it.
-- **Check coverage against the issue, not the brief.** Give it both, and ask
-  directly: walk the issue's enumerated requirements and name every one the diff
+- **Check coverage against the issue's acceptance criteria, not the brief.** Give
+  it both, and ask directly: walk the stage-1 criteria and name every one the diff
   does not satisfy. This is the only stage that can catch it — stage 5 confirms
   counts that came from the brief, so a brief narrower than its issue is
   self-consistent everywhere else. Approved carve-outs from stage 3 are expected
-  and should be named as such; anything else is a finding.
+  and should be named as such; anything else is a finding. A criterion the brief
+  never mentions is the most serious finding this stage produces: it means the
+  narrowing happened before any adversary was watching.
 - **Make it attack the enforcement mechanism, not just the feature.** The
   recurring finding is that the feature is correct and the _fence around it_ is
   not: a lint rule that covers one of five call sites, a guard that silently
@@ -534,9 +580,14 @@ wait` armed for it** (stage 4). Nothing else will wake you.
 - **Commit and PR the moment an issue clears review** (stage 9) — per issue, as it
   lands. Only the merge waits for the user. Reviewed work left sitting in a
   worktree is work at risk of being lost.
+- **Never spawn a planner for an issue with no acceptance criteria on it**
+  (stage 1). Criteria the planner invents are invisible to every stage downstream,
+  because each one then checks the work against that same invention.
 - **No agent files a GitHub issue during a run** — not the planner, not a worker,
   not you. Propose it and let the user decide. Scope that leaves an issue must
-  leave it visibly, with the user's approval (stage 3).
+  leave it visibly, with the user's approval (stage 3). Commenting on an issue
+  already in the batch is not filing one: stage-1 triage is required to comment,
+  and that is the only writing to GitHub any subagent does during a run.
 - Never claim a worker succeeded without reading its diff or its output.
 - Do not close panes, workspaces or worktrees you did not create.
 - Clean up only what you created, and only after the branch is merged or
